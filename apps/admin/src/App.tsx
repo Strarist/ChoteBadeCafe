@@ -108,38 +108,55 @@ export default function App() {
 
   if (!token || !me) {
     return (
-      <main className="shell login">
-        <h1>Admin</h1>
-        <p className="muted">PIN login — admin & manager only for most actions.</p>
-        {error && <p className="error">{error}</p>}
-        <label>
-          Name
-          <input value={name} onChange={(e) => setName(e.target.value)} />
-        </label>
-        <label>
-          PIN
-          <input type="password" value={pin} onChange={(e) => setPin(e.target.value)} />
-        </label>
-        <button
-          type="button"
-          className="primary"
-          disabled={busyKey === 'login'}
-          onClick={() => void login()}
+      <main className="login-screen">
+        <form
+          className="login-card"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void login();
+          }}
         >
-          {busyKey === 'login' ? 'Signing in…' : 'Sign in'}
-        </button>
+          <p className="eyebrow">Chote Bade</p>
+          <h1>Admin</h1>
+          <p className="login-lead">Sign in with your name and PIN. Admin and manager only.</p>
+          {error && <p className="error">{error}</p>}
+          <label>
+            Name
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              autoComplete="username"
+              autoFocus
+            />
+          </label>
+          <label>
+            PIN
+            <input
+              type="password"
+              value={pin}
+              onChange={(e) => setPin(e.target.value)}
+              autoComplete="current-password"
+              inputMode="numeric"
+            />
+          </label>
+          <button type="submit" className="primary" disabled={busyKey === 'login'}>
+            {busyKey === 'login' ? 'Signing in…' : 'Sign in'}
+          </button>
+        </form>
       </main>
     );
   }
 
   if (me.staff.role === 'cashier') {
     return (
-      <main className="shell login">
-        <h1>Access denied</h1>
-        <p className="muted">Cashiers use the Counter POS, not Admin.</p>
-        <button type="button" onClick={logout}>
-          Sign out
-        </button>
+      <main className="login-screen">
+        <section className="login-card">
+          <h1>Access denied</h1>
+          <p className="login-lead">Cashiers use the Counter POS, not Admin.</p>
+          <button type="button" className="primary" onClick={logout}>
+            Sign out
+          </button>
+        </section>
       </main>
     );
   }

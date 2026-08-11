@@ -214,18 +214,26 @@ export default function App() {
 
   if (!authedName || !getAuthToken()) {
     return (
-      <div className="counter-shell">
-        <header className="counter-header">
-          <div>
-            <p className="eyebrow">Chote Bade · Counter</p>
-            <h1>Staff login</h1>
-          </div>
-        </header>
-        {error && <div className="banner-error">{error}</div>}
-        <section className="queue-pane" style={{ maxWidth: 420 }}>
+      <div className="login-screen">
+        <form
+          className="login-card"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void login();
+          }}
+        >
+          <p className="eyebrow">Chote Bade · Counter</p>
+          <h1>Staff login</h1>
+          <p className="login-lead">Enter your name and PIN to open the till.</p>
+          {error && <div className="banner-error">{error}</div>}
           <label>
             Name
-            <input value={staffName} onChange={(e) => setStaffName(e.target.value)} />
+            <input
+              value={staffName}
+              onChange={(e) => setStaffName(e.target.value)}
+              autoComplete="username"
+              autoFocus
+            />
           </label>
           <label>
             PIN
@@ -233,13 +241,15 @@ export default function App() {
               type="password"
               value={staffPin}
               onChange={(e) => setStaffPin(e.target.value)}
+              autoComplete="current-password"
+              inputMode="numeric"
             />
           </label>
-          <button type="button" className="primary" onClick={() => void login()}>
+          <button type="submit" className="primary">
             Unlock POS
           </button>
           {!import.meta.env.PROD && <p className="empty">Demo: Cashier / 3456</p>}
-        </section>
+        </form>
       </div>
     );
   }
