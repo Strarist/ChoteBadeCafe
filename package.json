@@ -1,0 +1,43 @@
+{
+  "name": "cafe-order-system",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "dev": "turbo run dev --filter=@cafe/backend --filter=@cafe/customer-app --filter=@cafe/counter-pos --filter=@cafe/admin",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "db:generate": "prisma generate --schema=prisma/schema.prisma",
+    "db:migrate": "prisma migrate dev --schema=prisma/schema.prisma",
+    "db:migrate:deploy": "prisma migrate deploy --schema=prisma/schema.prisma",
+    "db:push": "prisma db push --schema=prisma/schema.prisma",
+    "check:secrets": "node scripts/check-secrets.js",
+    "deploy:check": "node scripts/check-deploy-env.js",
+    "deploy:up": "node scripts/check-deploy-env.js && docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build",
+    "deploy:down": "docker compose -f docker-compose.prod.yml --env-file .env.production down",
+    "deploy:logs": "docker compose -f docker-compose.prod.yml --env-file .env.production logs -f --tail=200",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:studio": "prisma studio --schema=prisma/schema.prisma",
+    "postinstall": "prisma generate --schema=prisma/schema.prisma",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "verify:phase0": "node scripts/verify-phase0.js"
+  },
+  "prisma": {
+    "schema": "prisma/schema.prisma",
+    "seed": "tsx prisma/seed.ts"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^3.0.0",
+    "prettier": "^3.5.3",
+    "prisma": "^6.19.3",
+    "socket.io-client": "4.8.1",
+    "tsx": "^4.19.3",
+    "turbo": "^2.5.0",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@prisma/client": "6.19.3",
+    "bcryptjs": "^3.0.3"
+  }
+}

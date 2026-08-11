@@ -1,0 +1,200 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../packages/database/src/generated"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrderSource {
+  qr
+  counter
+  swiggy
+  zomato
+}
+
+enum OrderStatus {
+  cart_building
+  awaiting_payment
+  payment_failed
+  confirmed
+  preparing
+  ready_for_handover
+  collected
+  cancelled
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  failed
+  refunded
+}
+
+enum PaymentMethod {
+  upi
+  card
+  qr
+  cash
+  pay_at_counter
+}
+
+enum PaymentRecordStatus {
+  pending
+  success
+  failed
+  refunded
+}
+
+enum ReadyNotificationStatus {
+  pending
+  sent
+  failed
+}
+
+enum ReadyNotificationChannel {
+  whatsapp
+  sms
+}
+
+enum OrderStatusLogSource {
+  staff
+  petpooja_webhook
+  system
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  mobile    String
+  email     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  orders    Order[]
+
+  @@index([mobile])
+  @@map("customers")
+}
+
+model MenuItem {
+  id             String      @id @default(cuid())
+  petpoojaItemId String?     @map("petpooja_item_id")
+  name           String
+  description    String?
+  price          Int // paise
+  category       String
+  isAvailable    Boolean     @default(true) @map("is_available")
+  syncedAt       DateTime?   @map("synced_at")
+  orderItems     OrderItem[]
+
+  @@index([category])
+  @@index([petpoojaItemId])
+  @@map("menu_items")
+}
+
+model Order {
+  id                       String                    @id @default(cuid())
+  token                    String
+  source                   OrderSource
+  status                   OrderStatus               @default(cart_building)
+  paymentStatus            PaymentStatus             @default(pending) @map("payment_status")
+  customerId               String                    @map("customer_id")
+  petpoojaOrderId          String?                   @map("petpooja_order_id")
+  petpoojaBillId           String?                   @map("petpooja_bill_id")
+  petpoojaStatusRaw        String?                   @map("petpooja_status_raw")
+  readyAt                  DateTime?                 @map("ready_at")
+  readyNotificationStatus  ReadyNotificationStatus?  @map("ready_notification_status")
+  readyNotificationChannel ReadyNotificationChannel? @map("ready_notification_channel")
+  tableId                  String?                   @map("table_id")
+  petpoojaPushFailed       Boolean                   @default(false) @map("petpooja_push_failed")
+  petpoojaPushError        String?                   @map("petpooja_push_error")
+  claimLockedUntil         DateTime?                 @map("claim_locked_until")
+  claimLockedBy            String?                   @map("claim_locked_by")
+  createdAt                DateTime                  @default(now()) @map("created_at")
+  updatedAt                DateTime                  @updatedAt @map("updated_at")
+
+  customer   Customer         @relation(fields: [customerId], references: [id])
+  items      OrderItem[]
+  payments   Payment[]
+  statusLogs OrderStatusLog[]
+
+  @@index([token, createdAt])
+  @@index([status])
+  @@index([paymentStatus])
+  @@map("orders")
+}
+
+model OrderItem {
+  id           String  @id @default(cuid())
+  orderId      String  @map("order_id")
+  menuItemId   String  @map("menu_item_id")
+  quantity     Int
+  instructions String?
+
+  order    Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItem MenuItem @relation(fields: [menuItemId], references: [id])
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+model Payment {
+  id         String              @id @default(cuid())
+  orderId    String              @map("order_id")
+  method     PaymentMethod
+  amount     Int // paise
+  gatewayRef String?             @map("gateway_ref")
+  status     PaymentRecordStatus @default(pending)
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([gatewayRef])
+  @@index([orderId])
+  @@map("payments")
+}
+
+enum StaffRole {
+  admin
+  manager
+  cashier
+}
+
+model StaffUser {
+  id          String    @id @default(cuid())
+  name        String
+  role        StaffRole @default(cashier)
+  pinHash     String    @map("pin_hash")
+  isActive    Boolean   @default(true) @map("is_active")
+  lastLoginAt DateTime? @map("last_login_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  statusLogs  OrderStatusLog[]
+
+  @@map("staff_users")
+}
+
+model OrderStatusLog {
+  id          String               @id @default(cuid())
+  orderId     String               @map("order_id")
+  status      OrderStatus
+  staffUserId String?              @map("staff_user_id")
+  source      OrderStatusLogSource
+  timestamp   DateTime             @default(now())
+
+  order     Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  staffUser StaffUser? @relation(fields: [staffUserId], references: [id])
+
+  @@index([orderId])
+  @@map("order_status_log")
+}
+
+/// Daily counter for short human-readable order tokens (e.g. A23).
+model OrderTokenSequence {
+  id          String   @id @default(cuid())
+  dayKey      String   @unique @map("day_key") // YYYY-MM-DD in cafe local timezone
+  letterIndex Int      @default(0) @map("letter_index") // 0 = A
+  counter     Int      @default(0)
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("order_token_sequences")
+}

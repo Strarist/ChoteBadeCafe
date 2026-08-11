@@ -1,0 +1,376 @@
+@import 'tailwindcss';
+
+:root {
+  --cream: #f4efe6;
+  --ink: #32261b;
+  --burgundy: #7a2f3a;
+  --clay: #a95e47;
+  --line: #c6b8a9;
+  --danger: #8f2f2f;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  font-family: Manrope, ui-sans-serif, system-ui, sans-serif;
+  color: var(--ink);
+  background: linear-gradient(180deg, #f4efe6 0%, #ebe6db 100%);
+}
+
+.counter-shell {
+  min-height: 100vh;
+  padding: 1rem 1.25rem 2rem;
+}
+
+.counter-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--burgundy);
+}
+
+.counter-header h1 {
+  margin: 0.2rem 0 0;
+  font-size: 2rem;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tab {
+  min-height: 48px;
+  padding: 0.65rem 1rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.35);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tab.active {
+  background: var(--burgundy);
+  color: var(--cream);
+  border-color: var(--burgundy);
+}
+
+.banner-error {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 1rem;
+  background: #f8e4e0;
+  color: var(--danger);
+}
+
+.order-grid {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 1rem;
+  min-height: 70vh;
+}
+
+@media (max-width: 1024px) {
+  .order-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.menu-pane,
+.cart-pane,
+.queue-pane {
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 1.25rem;
+  background: rgba(247, 241, 231, 0.55);
+  box-shadow:
+    0 12px 36px rgba(50, 38, 27, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(14px) saturate(1.15);
+  -webkit-backdrop-filter: blur(14px) saturate(1.15);
+  padding: 1rem;
+}
+
+.category-block + .category-block {
+  margin-top: 1.25rem;
+}
+
+.category-block h2,
+.cart-pane h2,
+.queue-pane h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.25rem;
+}
+
+.item-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(158px, 1fr));
+  gap: 0.7rem;
+}
+
+.menu-tile {
+  min-height: 104px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.35rem;
+  padding: 0.9rem;
+  border-radius: 1rem;
+  border: 1px solid var(--line);
+  background: #fffaf3;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform 120ms ease,
+    background 180ms ease,
+    box-shadow 180ms ease,
+    border-color 180ms ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.menu-tile:active {
+  transform: scale(0.96);
+  background: #f3e6d6;
+  box-shadow: inset 0 2px 8px rgba(50, 38, 27, 0.08);
+}
+
+.menu-tile.just-added {
+  border-color: var(--burgundy);
+  background: #f4e4df;
+  box-shadow: 0 0 0 2px rgba(122, 47, 58, 0.25);
+  transform: scale(1.03);
+}
+
+.menu-tile.in-cart {
+  border-color: rgba(122, 47, 58, 0.45);
+}
+
+.menu-tile .tile-top {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.menu-tile .name {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.menu-tile .qty-badge {
+  flex-shrink: 0;
+  min-width: 1.6rem;
+  height: 1.6rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: var(--burgundy);
+  color: var(--cream);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.6rem;
+  text-align: center;
+}
+
+.menu-tile .price {
+  font-weight: 600;
+  color: var(--burgundy);
+}
+
+.menu-tile .tile-hint {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #8a7a68;
+}
+
+.field-hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.78rem;
+  color: #8a7a68;
+}
+
+.primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.primary:not(:disabled):active,
+.actions button:active,
+.qty button:active,
+.tab:active {
+  transform: scale(0.97);
+  filter: brightness(0.95);
+}
+
+.cart-pane label {
+  display: block;
+  margin-bottom: 0.65rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.cart-pane input,
+.cart-list input {
+  width: 100%;
+  margin-top: 0.3rem;
+  min-height: 44px;
+  border-radius: 0.75rem;
+  border: 1px solid var(--line);
+  padding: 0.55rem 0.75rem;
+  background: #fff;
+}
+
+.cart-list {
+  list-style: none;
+  margin: 0.75rem 0;
+  padding: 0;
+  max-height: 42vh;
+  overflow: auto;
+}
+
+.cart-list li {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid rgba(50, 38, 27, 0.08);
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.qty {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.qty button,
+.actions button,
+.primary,
+.modal .actions button {
+  min-height: 44px;
+  min-width: 44px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.4rem 0.85rem;
+}
+
+.primary {
+  background: var(--burgundy);
+  color: var(--cream);
+  border-color: var(--burgundy);
+  width: 100%;
+}
+
+.cart-footer .total {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0.5rem 0;
+}
+
+.token-flash {
+  margin-top: 0.75rem;
+  font-weight: 700;
+  color: var(--burgundy);
+}
+
+.ticket-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.85rem;
+}
+
+.ticket {
+  border-radius: 1rem;
+  border: 1px solid var(--line);
+  background: #fffaf3;
+  padding: 1rem;
+}
+
+.ticket.stale {
+  background: #f7e3d8;
+  border-color: var(--clay);
+}
+
+.ticket header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.ticket .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+}
+
+.empty {
+  color: #6f6152;
+}
+
+.error-text {
+  color: var(--danger);
+  font-size: 0.85rem;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(50, 38, 27, 0.4);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  z-index: 50;
+}
+
+.modal {
+  width: min(420px, 100%);
+  border-radius: 1.25rem;
+  background: var(--cream);
+  padding: 1.25rem;
+}
+
+.modal .token {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--burgundy);
+}
+
+.modal .actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.modal .actions .primary {
+  flex: 1;
+}

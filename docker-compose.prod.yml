@@ -1,0 +1,102 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: cafe-prod-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cafe
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: cafe_orders
+    volumes:
+      - cafe_prod_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U cafe -d cafe_orders']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - cafe
+
+  redis:
+    image: redis:7-alpine
+    container_name: cafe-prod-redis
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - cafe_prod_redis_data:/data
+    healthcheck:
+      test: ['CMD-SHELL', 'redis-cli -a "$$REDIS_PASSWORD" ping | grep PONG']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - cafe
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: api
+    container_name: cafe-prod-api
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgresql://cafe:${POSTGRES_PASSWORD}@postgres:5432/cafe_orders?schema=public
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    networks:
+      - cafe
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: web
+    container_name: cafe-prod-web
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS}
+      CADDY_EMAIL: ${CADDY_EMAIL}
+    volumes:
+      - cafe_prod_caddy_data:/data
+      - cafe_prod_caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - cafe
+
+volumes:
+  cafe_prod_postgres_data:
+  cafe_prod_redis_data:
+  cafe_prod_caddy_data:
+  cafe_prod_caddy_config:
+
+networks:
+  cafe:
+    driver: bridge

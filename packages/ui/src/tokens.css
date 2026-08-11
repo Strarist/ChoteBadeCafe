@@ -1,0 +1,9 @@
+:root {
+  /* Minimal shared tokens — grow once design direction is locked. */
+  --cafe-color-bg: #f7f4ef;
+  --cafe-color-fg: #1a1a1a;
+  --cafe-color-muted: #6b6b6b;
+  --cafe-color-accent: #2f5d50;
+  --cafe-radius: 0.5rem;
+  --cafe-font-sans: ui-sans-serif, system-ui, sans-serif;
+}

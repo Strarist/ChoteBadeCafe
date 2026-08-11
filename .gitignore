@@ -1,0 +1,56 @@
+# Dependencies & build
+node_modules
+dist
+.next
+.turbo
+coverage
+.vite
+*.tsbuildinfo
+apps/*/dist
+apps/*/.next
+
+# Environment & secrets — keep only *.example files in git
+.env
+.env.*
+!.env.example
+!.env.production.example
+!.env*.example
+*.pem
+*.key
+*.p8
+*.p12
+*.pfx
+*.crt
+id_rsa
+id_ed25519
+id_ecdsa
+**/credentials.json
+**/service-account*.json
+secrets/
+*.secret
+
+# Local / machine data
+*.log
+.DS_Store
+Thumbs.db
+_preview-capture
+prisma/*.db
+prisma/*.db-journal
+*.dump
+backup-*.sql
+*.sql.gz
+
+# Editors & OS
+.idea
+.vscode/*
+!.vscode/extensions.json
+.cursor/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Docker / Caddy leftovers if someone runs compose on the host
+caddy_data/
+caddy_config/
