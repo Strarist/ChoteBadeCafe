@@ -1,5 +1,8 @@
-# Render Blueprint — API + Postgres + Redis.
-# Frontends: deploy as Vercel projects (see DEPLOY-CLOUD.md) or Render Static Sites.
+# Optional IaC — do NOT apply this as a Blueprint if you want $0.
+# Blueprints / Starter plans ask for a card.
+# Follow DEPLOY-CLOUD.md and create each Free service by hand instead.
+#
+# If you later add billing, you can switch plans here and apply a Blueprint.
 databases:
   - name: chote-bade-db
     plan: free
@@ -8,17 +11,17 @@ databases:
 services:
   - type: keyvalue
     name: chote-bade-redis
-    plan: starter
+    plan: free
     ipAllowList: []
     maxmemoryPolicy: noeviction
 
   - type: web
     name: chote-bade-api
     runtime: node
-    plan: starter
+    plan: free
     healthCheckPath: /health
     buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @cafe/shared-types build && pnpm exec prisma generate --schema=prisma/schema.prisma && pnpm --filter @cafe/backend build
-    startCommand: pnpm exec prisma migrate deploy --schema=prisma/schema.prisma && node apps/backend/dist/main.js
+    startCommand: pnpm exec prisma migrate deploy --schema=prisma/schema.prisma && pnpm db:seed && node apps/backend/dist/main.js
     envVars:
       - key: NODE_ENV
         value: production
@@ -35,8 +38,6 @@ services:
         generateValue: true
       - key: ALLOW_FAKE_PAYMENTS
         value: '0'
-      - key: SEED_ON_BOOT
-        value: '1'
       - key: PETPOOJA_ADAPTER
         value: fake
       - key: PAYMENT_ADAPTER

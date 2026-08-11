@@ -1,185 +1,236 @@
-# Deploy on Render + Vercel
+# Free deploy (no credit card)
 
-Do **not** put the Nest API on Vercel. It needs a long-running Node process, Postgres, Redis, and Socket.IO. Vercel is serverless and will drop those connections.
+**Do not use Render → New → Blueprint.** Blueprints often demand billing even when the app can run on Free instances.
 
-**Recommended split**
+Create each service **by hand** and pick **Free** every time.
 
-| Piece | Where | Why |
+| Piece | Where | Instance |
 |---|---|---|
-| API + migrations | Render Web Service | Always-on Node, health checks, webhooks |
-| Postgres | Render Postgres | `DATABASE_URL` injected |
-| Redis | Render Key Value | Socket.IO adapter |
-| Customer / Counter / Admin | Vercel (3 Vite projects) | Fast CDN, SPA rewrites |
+| Postgres | Render → PostgreSQL | **Free** (expires after 30 days) |
+| Redis | Render → Key Value | **Free** |
+| Nest API | Render → Web Service | **Free** (sleeps after 15 min idle) |
+| Customer / Counter / Admin | Render Static Sites **or** Vercel Hobby | **Free** |
 
-All-on-Render is also fine: keep the API as below and add 3 Static Sites instead of Vercel.
+No payment method. Sign up with GitHub on [render.com](https://render.com) and optionally [vercel.com](https://vercel.com).
 
----
+**Caveats (free only)**
 
-## A. GitHub (already done when you push `main`)
-
-Repo: `ChoteBadeCafe`. Secrets stay out of git (`.env`, `.env.production`). Only `*.example` files are committed.
-
----
-
-## B. Render — API, database, Redis
-
-### 1. Create the Blueprint
-
-1. Open [Render Dashboard](https://dashboard.render.com) → **New** → **Blueprint**.
-2. Connect the `ChoteBadeCafe` GitHub repo.
-3. Render reads `render.yaml` and offers:
-   - `chote-bade-db` (Postgres)
-   - `chote-bade-redis` (Key Value)
-   - `chote-bade-api` (Node web service)
-4. Apply. Wait until Postgres is **Available** and the API deploy finishes.
-
-### 2. Fill API env vars (Render → chote-bade-api → Environment)
-
-Set these after the first deploy (Blueprint leaves `CORS_ORIGINS` for you):
-
-| Key | Value |
-|---|---|
-| `CORS_ORIGINS` | Comma-separated Vercel URLs, e.g. `https://chote-bade.vercel.app,https://chote-bade-counter.vercel.app,https://chote-bade-admin.vercel.app` |
-| `SEED_ON_BOOT` | `1` for the first boot only, then `0` |
-| Razorpay / PetPooja / WhatsApp | Only when you switch that adapter to `live` |
-
-`STAFF_SESSION_SECRET` and `PETPOOJA_WEBHOOK_SECRET` are auto-generated. Do not set `ALLOW_FAKE_PAYMENTS=1`.
-
-### 3. Confirm the API
-
-```bash
-curl -fsS https://chote-bade-api.onrender.com/health
-curl -fsS https://chote-bade-api.onrender.com/health/integrations
-```
-
-Expect `database` and `redis` = `up`. Copy this API origin — you need it on Vercel as `VITE_API_URL`.
-
-### 4. First-boot staff
-
-If seed ran: Admin/`1234`, Manager/`2345`, Cashier/`3456`. Change PINs in Admin immediately, then set `SEED_ON_BOOT=0` and redeploy.
-
-### 5. Partner webhooks (when going live)
-
-| Provider | URL |
-|---|---|
-| Razorpay | `https://<api-host>/payments/webhooks/razorpay` |
-| PetPooja | `https://<api-host>/petpooja/webhooks/order-status` |
+- First request after idle can take ~30–60s while the API wakes up.
+- Free Postgres is deleted ~30 days after creation unless you upgrade later.
+- One free Postgres and one free Key Value per Render workspace.
 
 ---
 
-## C. Vercel — three frontends
+## 0. You already have
 
-Create **three** projects from the same GitHub repo. Each app gets its own domain.
+- GitHub repo: https://github.com/Strarist/ChoteBadeCafe
+- A Render account (Hobby / free workspace)
 
-### 1. Customer site
-
-1. [vercel.com/new](https://vercel.com/new) → import `ChoteBadeCafe`.
-2. Project name: `chote-bade` (or your brand).
-3. **Root Directory**: `apps/customer-app`.
-4. Framework: Vite (auto).
-5. Override commands:
-
-| Setting | Value |
-|---|---|
-| Install | `cd ../.. && corepack enable && pnpm install --frozen-lockfile` |
-| Build | `cd ../.. && pnpm --filter @cafe/customer-app build` |
-| Output | `dist` |
-
-6. Environment variable (Production + Preview):
-
-| Key | Value |
-|---|---|
-| `VITE_API_URL` | `https://chote-bade-api.onrender.com` (no trailing slash, no `/api`) |
-
-7. Deploy. SPA routes (`/t/:tableId`, `/order/:id`) are covered by `apps/customer-app/vercel.json`.
-
-### 2. Counter POS
-
-Same repo, **Add New Project** again.
-
-| Setting | Value |
-|---|---|
-| Root Directory | `apps/counter-pos` |
-| Install | `cd ../.. && corepack enable && pnpm install --frozen-lockfile` |
-| Build | `cd ../.. && pnpm --filter @cafe/counter-pos build` |
-| Output | `dist` |
-| `VITE_API_URL` | same Render API origin |
-
-### 3. Admin
-
-| Setting | Value |
-|---|---|
-| Root Directory | `apps/admin` |
-| Install | `cd ../.. && corepack enable && pnpm install --frozen-lockfile` |
-| Build | `cd ../.. && pnpm --filter @cafe/admin build` |
-| Output | `dist` |
-| `VITE_API_URL` | same Render API origin |
-
-### 4. Wire CORS
-
-Once Vercel gives you the three `*.vercel.app` URLs (and any custom domains):
-
-1. Put them all in Render `CORS_ORIGINS` (comma-separated, `https://`, no trailing slash).
-2. Redeploy the API (or restart). Socket.IO uses the same list.
-
-### 5. Custom domains (optional)
-
-- Customer: `chotebade.com` / `order.chotebade.com` → Vercel customer project
-- Counter: `counter.chotebade.com` → Vercel counter project
-- Admin: `admin.chotebade.com` → Vercel admin project
-- API can stay on `*.onrender.com`, or add `api.chotebade.com` in Render → Custom Domain, then update every `VITE_API_URL` and rebuild the Vercel projects.
-
-QR codes on tables must use the **customer** origin, e.g. `https://chotebade.com/t/12`.
+Open a notes file. You will paste 4 URLs into it.
 
 ---
 
-## D. All-on-Render (no Vercel)
+## 1. Free Postgres
 
-If you prefer one vendor:
+1. [dashboard.render.com](https://dashboard.render.com) → **New +** → **PostgreSQL**.
+2. Name: `chote-bade-db`.
+3. Database / user: leave defaults.
+4. Region: pick one and **reuse it for every other service** (e.g. Singapore or Frankfurt).
+5. **Instance type: Free**.
+6. Create. Wait until status is **Available**.
+7. Open the database → **Connections** → copy **Internal Database URL**.  
+   That is `DATABASE_URL` (use Internal, not External — the API will sit on Render too).
 
-1. Keep section B as-is.
-2. For each frontend: **New** → **Static Site** → same repo.
-3. Build commands (from repo root):
+---
+
+## 2. Free Redis (Key Value)
+
+1. **New +** → **Key Value**.
+2. Name: `chote-bade-redis`.
+3. Same region as Postgres.
+4. **Instance type: Free**.
+5. Maxmemory policy: `noeviction` (or the default).
+6. Create. Wait until **Available**.
+7. Copy **Internal Redis URL**. That is `REDIS_URL`.
+
+---
+
+## 3. Free API (Web Service)
+
+1. **New +** → **Web Service**.
+2. Connect GitHub → select **ChoteBadeCafe** → **main**.
+3. Settings:
+
+| Field | Value |
+|---|---|
+| Name | `chote-bade-api` |
+| Language | Node |
+| Branch | `main` |
+| Region | same as the database |
+| Root Directory | *leave empty* |
+| Build command | see below |
+| Start command | see below |
+| **Instance type** | **Free** |
+
+**Build command**
 
 ```text
-# customer
-corepack enable && pnpm install --frozen-lockfile && VITE_API_URL=https://<api-host> pnpm --filter @cafe/customer-app build
-# publish directory: apps/customer-app/dist
-
-# counter
-... && VITE_API_URL=https://<api-host> pnpm --filter @cafe/counter-pos build
-# publish: apps/counter-pos/dist
-
-# admin
-... && VITE_API_URL=https://<api-host> pnpm --filter @cafe/admin build
-# publish: apps/admin/dist
+corepack enable && pnpm install --frozen-lockfile && pnpm --filter @cafe/shared-types build && pnpm exec prisma generate --schema=prisma/schema.prisma && pnpm --filter @cafe/backend build
 ```
 
-4. Rewrite `/*` → `/index.html` on each static site.
-5. Put the three static-site URLs in `CORS_ORIGINS`.
+**Start command**
+
+```text
+pnpm exec prisma migrate deploy --schema=prisma/schema.prisma && pnpm db:seed && node apps/backend/dist/main.js
+```
+
+(`pnpm db:seed` is safe in production: it will not wipe an existing menu or reset PINs.)
+
+4. **Add environment variables** *before* the first deploy:
+
+| Key | Value |
+|---|---|
+| `NODE_ENV` | `production` |
+| `DATABASE_URL` | Internal Postgres URL from step 1 |
+| `REDIS_URL` | Internal Redis URL from step 2 |
+| `STAFF_SESSION_SECRET` | 32+ random characters (see below) |
+| `ALLOW_FAKE_PAYMENTS` | `0` |
+| `PETPOOJA_ADAPTER` | `fake` |
+| `PAYMENT_ADAPTER` | `fake` |
+| `NOTIFICATION_ADAPTER` | `fake` |
+| `PETPOOJA_WEBHOOK_SECRET` | any long random string |
+| `CORS_ORIGINS` | `http://localhost:3000` for now — you will replace this in step 5 |
+
+Generate a secret in PowerShell:
+
+```powershell
+-join ((48..57 + 65..90 + 97..122) | Get-Random -Count 40 | ForEach-Object { [char]$_ })
+```
+
+5. Click **Deploy Web Service**. First build takes a few minutes.
+6. When it is Live, open:
+
+```text
+https://chote-bade-api.onrender.com/health
+```
+
+You want `"database":"up"` and `"redis":"up"`. If the first load spins for a minute, that is the free-tier wake-up.
+
+7. Copy the API origin (`https://chote-bade-api.onrender.com`) — no trailing slash. This is `VITE_API_URL`.
+
+If the deploy fails, open **Logs**. Common issues: instance type was Starter (billing), or `STAFF_SESSION_SECRET` shorter than 32 characters.
 
 ---
 
-## E. Go-live checklist
+## 4. Free frontends — pick one path
 
-1. `curl` `/health` → both deps `up`.
-2. Open customer URL → menu loads.
-3. Place a pay-at-counter order → it appears on Counter.
-4. Staff login on Counter + Admin (change seed PINs).
-5. Confirm Socket.IO updates without refresh.
-6. Set `SEED_ON_BOOT=0`.
-7. When partners are ready: `PAYMENT_ADAPTER=live` / `PETPOOJA_ADAPTER=live` + real keys on Render only.
+### Path A — all on Render (simplest, still free)
+
+Create **three** Static Sites from the same repo. **New +** → **Static Site** each time.
+
+**Customer**
+
+| Field | Value |
+|---|---|
+| Name | `chote-bade` |
+| Branch | `main` |
+| Build command | `corepack enable && pnpm install --frozen-lockfile && pnpm --filter @cafe/customer-app build` |
+| Publish directory | `apps/customer-app/dist` |
+
+Add env var **`VITE_API_URL`** = `https://chote-bade-api.onrender.com`  
+(Redirects / rewrites: **Add Rewrite** → Source `/*` → Destination `/index.html`.)
+
+**Counter**
+
+| Field | Value |
+|---|---|
+| Name | `chote-bade-counter` |
+| Build command | `corepack enable && pnpm install --frozen-lockfile && pnpm --filter @cafe/counter-pos build` |
+| Publish directory | `apps/counter-pos/dist` |
+| `VITE_API_URL` | same API origin |
+| Rewrite | `/*` → `/index.html` |
+
+**Admin**
+
+| Field | Value |
+|---|---|
+| Name | `chote-bade-admin` |
+| Build command | `corepack enable && pnpm install --frozen-lockfile && pnpm --filter @cafe/admin build` |
+| Publish directory | `apps/admin/dist` |
+| `VITE_API_URL` | same API origin |
+| Rewrite | `/*` → `/index.html` |
+
+Copy the three `*.onrender.com` URLs.
+
+### Path B — UIs on Vercel (also free)
+
+Hobby plan, no card required.
+
+For **each** of the three apps, [vercel.com/new](https://vercel.com/new) → import `ChoteBadeCafe` again (three projects).
+
+| Project | Root Directory | Install | Build | Output |
+|---|---|---|---|---|
+| Customer | `apps/customer-app` | `cd ../.. && corepack enable && pnpm install --frozen-lockfile` | `cd ../.. && pnpm --filter @cafe/customer-app build` | `dist` |
+| Counter | `apps/counter-pos` | same install | `cd ../.. && pnpm --filter @cafe/counter-pos build` | `dist` |
+| Admin | `apps/admin` | same install | `cd ../.. && pnpm --filter @cafe/admin build` | `dist` |
+
+Env var on all three (Production + Preview):
+
+`VITE_API_URL` = `https://chote-bade-api.onrender.com`
+
+SPA fallback is already in each app’s `vercel.json`.
 
 ---
 
-## F. Why not “Vercel only”?
+## 5. Unlock the browsers (CORS)
 
-| Need | Vercel | Render |
-|---|---|---|
-| Vite SPAs | Excellent | Static Site is fine |
-| NestJS + Prisma | Only via hacks / sleep timeouts | Native web service |
-| Socket.IO | Unreliable on serverless | Works |
-| Postgres + Redis | External add-ons anyway | Native |
-| Razorpay / PetPooja webhooks | Need a stable origin | Stable web service |
+Back on **chote-bade-api** → **Environment**.
 
-Use Vercel for the three UIs. Use Render for anything that talks to the database or a webhook.
+Set `CORS_ORIGINS` to the three UI origins, comma-separated, `https://`, **no trailing slash**. Example:
+
+```text
+https://chote-bade.onrender.com,https://chote-bade-counter.onrender.com,https://chote-bade-admin.onrender.com
+```
+
+Save → **Manual Deploy** → **Deploy latest commit** (env changes need a restart).
+
+---
+
+## 6. Smoke test
+
+1. Customer URL → menu loads (first hit may be slow).
+2. QR path: `https://<customer>/t/12` → add an item → pay at counter.
+3. Counter URL → login **Cashier** / **3456** → order appears on Pay queue.
+4. Admin URL → **Admin** / **1234** → change those PINs immediately.
+
+Then on the API service, you can leave seed in the start command. It will not reset PINs on later deploys.
+
+---
+
+## 7. Table QR codes
+
+Print URLs against the **customer** origin:
+
+```text
+https://<customer-host>/t/1
+https://<customer-host>/t/2
+```
+
+---
+
+## If something asks for a card
+
+| Screen | What to do |
+|---|---|
+| Blueprint | Cancel. Use steps 1–3 instead. |
+| Instance type Starter / Standard | Switch the dropdown to **Free**. |
+| “Add payment method to continue” | You picked a paid instance or Blueprint. Go back. |
+| Postgres create only shows paid sizes | Scroll — **Free** is a separate instance-type card, not a region. |
+
+Do **not** open `render.yaml` as a Blueprint. That file is leftover IaC; this guide does not use it.
+
+---
+
+## Later (still optional, still paid)
+
+When the cafe is live and you want no sleep + a database that does not expire: upgrade the **API** and **Postgres** instance types only. Frontends can stay free.

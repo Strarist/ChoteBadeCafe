@@ -66,7 +66,7 @@ node scripts/audit-flow.js
 
 ## Production deploy
 
-**Vercel (UIs) + Render (API / Postgres / Redis):** see [DEPLOY-CLOUD.md](./DEPLOY-CLOUD.md).
+**Free cloud (no credit card):** create Free Render services by hand — do **not** use Blueprint. See [DEPLOY-CLOUD.md](./DEPLOY-CLOUD.md).
 
 **Single VPS (Docker + Caddy):** see [DEPLOY.md](./DEPLOY.md). Short version:
 
