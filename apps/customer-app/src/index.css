@@ -20,6 +20,7 @@
 
   --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Fraunces", ui-serif, Georgia, serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --shadow-polaroid: 0 18px 40px rgba(50, 38, 27, 0.18);
   --shadow-lift: 0 22px 50px rgba(50, 38, 27, 0.14);

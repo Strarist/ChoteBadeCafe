@@ -217,6 +217,85 @@ https://<customer-host>/t/1
 https://<customer-host>/t/2
 ```
 
+After the custom domain is live, reprint QR codes against `https://chotebadecafe.com/t/1` (not the `.onrender.com` URL).
+
+---
+
+## 8. Custom domain — `chotebadecafe.com`
+
+Point **only** the customer Static Site at this domain. Leave the API, Counter, and Admin on `*.onrender.com`.
+
+Right now [chotebadecafe.com](https://chotebadecafe.com/) is still a parked / builder site (“Sip. Relax. Repeat.”). You replace that by changing **DNS**, not by editing this repo.
+
+### A. Add the domain on Render
+
+1. Open [dashboard.render.com](https://dashboard.render.com) and click the customer Static Site **`chote-bade`** (not the API).
+2. Open **Settings**.
+3. Scroll to **Custom Domains**.
+4. Click **Add Custom Domain**.
+5. Type `chotebadecafe.com` → **Save**.
+6. Click **Add Custom Domain** again and add `www.chotebadecafe.com`.
+7. Render shows the exact records to create. Keep that tab open. Typical values:
+
+| Host | Type | Value |
+|---|---|---|
+| `@` (apex / `chotebadecafe.com`) | **A** | `216.24.57.1` |
+| `www` | **CNAME** | `chote-bade.onrender.com` |
+
+If Render shows a different A IP or a verify CNAME, use **Render’s values**, not this table.
+
+Hobby includes 2 custom domains, so apex + `www` is fine.
+
+### B. Change DNS at the registrar
+
+1. Log into wherever you bought the domain (GoDaddy, Namecheap, Google Domains, Hostinger, etc.).
+2. Open **DNS** / **DNS Management** / **Advanced DNS** for `chotebadecafe.com`.
+3. **Delete** anything that currently serves the placeholder site:
+   - `A` records for `@` pointing at a builder / parking IP
+   - `AAAA` records (Render is IPv4 only — they break the site)
+   - `CNAME` or **Forwarding** for `www` that still points at the old host
+   - Do **not** delete `MX` (email) or `TXT` (Google/Microsoft verify) unless you know they are unused
+4. Add the two records from step A.
+5. Set TTL to **600** seconds (or the lowest the UI allows).
+6. Save.
+
+**GoDaddy:** Domain → **DNS** → remove the parked `A` / forwarding → add A `@` and CNAME `www`.
+
+**Namecheap:** Domain → **Advanced DNS** → same two records.
+
+Do **not** change nameservers unless Render or your registrar told you to. Only change **records**.
+
+### C. Wait for SSL
+
+Back on Render → **chote-bade** → **Settings** → **Custom Domains**:
+
+1. Status goes **Waiting for DNS** → **Certificate issued**.
+2. This can take 5–60 minutes (sometimes a few hours).
+3. Open `https://chotebadecafe.com/` — you should see Chote Bade Café (not “Sip. Relax. Repeat.”).
+4. Open `https://www.chotebadecafe.com/` — it should also load (Render can redirect www ↔ apex).
+
+If the old cafe page is still there: DNS has not propagated, or an old `A`/`AAAA` is still present. Recheck the registrar.
+
+### D. Unlock the new origin on the API (required)
+
+Browsers will call the API from `https://chotebadecafe.com`. If that origin is missing from CORS, the menu/login will fail.
+
+1. Render → Web Service **`chote-bade-api`** (or whatever you named the API) → **Environment**.
+2. Edit `CORS_ORIGINS`. Keep the three `.onrender.com` UIs **and** add both domain variants, comma-separated, **no trailing slash**:
+
+```text
+https://chote-bade.onrender.com,https://chote-bade-counter.onrender.com,https://chotebadecafe-admin.onrender.com,https://chotebadecafe.com,https://www.chotebadecafe.com
+```
+
+Use your real Counter/Admin URLs if they differ.
+
+3. Save → **Manual Deploy** → **Deploy latest commit** (env change needs a restart).
+4. Do **not** change `VITE_API_URL` on the customer site. It stays the API origin (`https://chotebadecafe.onrender.com` or whatever `/health` returns JSON for).
+
+### E. Phone / PWA
+
+Hard-refresh the customer site (or clear site data). The PWA may still have the old `.onrender.com` shell cached.
+
 ---
 
 ## If something asks for a card
