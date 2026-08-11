@@ -34,7 +34,7 @@ export class AuthService {
     this.assertLoginAllowed(key);
 
     const staff = await this.prisma.staffUser.findFirst({
-      where: { name: name.trim(), isActive: true },
+      where: { name: { equals: name.trim(), mode: 'insensitive' }, isActive: true },
     });
     if (!staff) {
       this.recordLoginFailure(key);

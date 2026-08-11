@@ -19,7 +19,13 @@ async function bootstrap() {
     }),
   );
 
-  app.use(helmet());
+  app.use(
+    helmet({
+      // Static sites (admin/counter/customer) are other origins; default same-origin CORP blocks fetch.
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+      crossOriginEmbedderPolicy: false,
+    }),
+  );
 
   const corsOrigins = parseCorsOrigins(process.env.CORS_ORIGINS);
   if (process.env.NODE_ENV === 'production' && corsOrigins.every((o) => /localhost|127\.0\.0\.1/.test(o))) {
