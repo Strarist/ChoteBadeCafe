@@ -19,7 +19,7 @@
     "deploy:logs": "docker compose -f docker-compose.prod.yml --env-file .env.production logs -f --tail=200",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio --schema=prisma/schema.prisma",
-    "postinstall": "prisma generate --schema=prisma/schema.prisma",
+    "postinstall": "prisma generate --schema=prisma/schema.prisma || echo prisma generate skipped",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "verify:phase0": "node scripts/verify-phase0.js"
   },
@@ -30,14 +30,14 @@
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",
     "prettier": "^3.5.3",
-    "prisma": "^6.19.3",
     "socket.io-client": "4.8.1",
-    "tsx": "^4.19.3",
     "turbo": "^2.5.0",
     "typescript": "^5.8.3"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
-    "bcryptjs": "^3.0.3"
+    "bcryptjs": "^3.0.3",
+    "prisma": "^6.19.3",
+    "tsx": "^4.19.3"
   }
 }

@@ -13,7 +13,7 @@ export class HealthService {
   async check(): Promise<HealthResponse> {
     const [database, redis] = await Promise.all([this.checkDatabase(), this.checkRedis()]);
 
-    const ok = database === 'up' && redis === 'up';
+    const ok = database === 'up' && redis !== 'down';
     return {
       status: ok ? 'ok' : 'degraded',
       timestamp: new Date().toISOString(),
@@ -31,7 +31,8 @@ export class HealthService {
     }
   }
 
-  private async checkRedis(): Promise<'up' | 'down'> {
+  private async checkRedis(): Promise<'up' | 'down' | 'skipped'> {
+    if (!this.redis.enabled) return 'skipped';
     const ok = await this.redis.ping();
     return ok ? 'up' : 'down';
   }

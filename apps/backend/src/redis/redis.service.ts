@@ -5,14 +5,14 @@ import Redis from 'ioredis';
 @Injectable()
 export class RedisService implements OnModuleDestroy {
   private readonly logger = new Logger(RedisService.name);
-  readonly client: Redis;
+  readonly client: Redis | null;
 
   constructor(configService: ConfigService) {
-    const redisUrl = configService.get<string>('REDIS_URL');
+    const redisUrl = configService.get<string>('REDIS_URL')?.trim();
     if (!redisUrl) {
-      throw new Error(
-        'REDIS_URL is missing. Set it in the environment (see .env.example). Refusing to start.',
-      );
+      this.logger.warn('REDIS_URL unset — running without Redis (fine for a single free API).');
+      this.client = null;
+      return;
     }
 
     this.client = new Redis(redisUrl, {
@@ -26,13 +26,19 @@ export class RedisService implements OnModuleDestroy {
     );
   }
 
+  get enabled(): boolean {
+    return this.client !== null;
+  }
+
   async connect(): Promise<void> {
+    if (!this.client) return;
     if (this.client.status === 'wait' || this.client.status === 'end') {
       await this.client.connect();
     }
   }
 
   async ping(): Promise<boolean> {
+    if (!this.client) return false;
     try {
       await this.connect();
       const result = await this.client.ping();
@@ -43,6 +49,6 @@ export class RedisService implements OnModuleDestroy {
   }
 
   async onModuleDestroy(): Promise<void> {
-    await this.client.quit();
+    if (this.client) await this.client.quit();
   }
 }

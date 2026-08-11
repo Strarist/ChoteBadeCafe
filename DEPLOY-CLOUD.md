@@ -7,7 +7,7 @@ Create each service **by hand** and pick **Free** every time.
 | Piece | Where | Instance |
 |---|---|---|
 | Postgres | Render → PostgreSQL | **Free** (expires after 30 days) |
-| Redis | Render → Key Value | **Free** |
+| Redis | **Skip** | Not required. Key Value is often paid-only |
 | Nest API | Render → Web Service | **Free** (sleeps after 15 min idle) |
 | Customer / Counter / Admin | Render Static Sites **or** Vercel Hobby | **Free** |
 
@@ -43,15 +43,13 @@ Open a notes file. You will paste 4 URLs into it.
 
 ---
 
-## 2. Free Redis (Key Value)
+## 2. Skip Redis / Key Value
 
-1. **New +** → **Key Value**.
-2. Name: `chote-bade-redis`.
-3. Same region as Postgres.
-4. **Instance type: Free**.
-5. Maxmemory policy: `noeviction` (or the default).
-6. Create. Wait until **Available**.
-7. Copy **Internal Redis URL**. That is `REDIS_URL`.
+Do **not** create Key Value. On many Hobby accounts it only offers paid instances and asks for a card.
+
+The API runs with an in-memory Socket.IO adapter when `REDIS_URL` is unset. Fine for one free web service.
+
+If you later see **New + → Key Value** with a **Free** card, you can add it then and set `REDIS_URL`. Until then, omit `REDIS_URL` entirely.
 
 ---
 
@@ -75,7 +73,7 @@ Open a notes file. You will paste 4 URLs into it.
 **Build command**
 
 ```text
-corepack enable && pnpm install --frozen-lockfile && pnpm --filter @cafe/shared-types build && pnpm exec prisma generate --schema=prisma/schema.prisma && pnpm --filter @cafe/backend build
+corepack enable && pnpm install --frozen-lockfile --prod=false && pnpm --filter @cafe/shared-types build && pnpm exec prisma generate --schema=prisma/schema.prisma && pnpm --filter @cafe/backend build
 ```
 
 **Start command**
@@ -92,7 +90,6 @@ pnpm exec prisma migrate deploy --schema=prisma/schema.prisma && pnpm db:seed &&
 |---|---|
 | `NODE_ENV` | `production` |
 | `DATABASE_URL` | Internal Postgres URL from step 1 |
-| `REDIS_URL` | Internal Redis URL from step 2 |
 | `STAFF_SESSION_SECRET` | 32+ random characters (see below) |
 | `ALLOW_FAKE_PAYMENTS` | `0` |
 | `PETPOOJA_ADAPTER` | `fake` |
@@ -114,7 +111,7 @@ Generate a secret in PowerShell:
 https://chote-bade-api.onrender.com/health
 ```
 
-You want `"database":"up"` and `"redis":"up"`. If the first load spins for a minute, that is the free-tier wake-up.
+You want `"database":"up"`. `"redis":"skipped"` is correct when you did not create Key Value. If the first load spins for a minute, that is the free-tier wake-up.
 
 7. Copy the API origin (`https://chote-bade-api.onrender.com`) — no trailing slash. This is `VITE_API_URL`.
 

@@ -153,7 +153,7 @@ export interface HealthResponse {
   status: 'ok' | 'degraded';
   timestamp: string;
   database: 'up' | 'down';
-  redis: 'up' | 'down';
+  redis: 'up' | 'down' | 'skipped';
 }
 
 export interface CreateOrderItemInput {
