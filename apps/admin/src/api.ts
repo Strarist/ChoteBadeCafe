@@ -1,10 +1,10 @@
-const API_URL = import.meta.env.VITE_API_URL ?? '/api';
+import { joinApiUrl, throwIfNotJson } from '../../../packages/frontend-api.ts';
 
 export async function api<T>(
   path: string,
   opts?: { method?: string; body?: unknown; token?: string | null },
 ): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await fetch(joinApiUrl(path), {
     method: opts?.method ?? 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -13,6 +13,7 @@ export async function api<T>(
     body: opts?.body ? JSON.stringify(opts.body) : undefined,
   });
   const text = await res.text();
+  throwIfNotJson(res, text);
   if (!res.ok) {
     let message = text || `HTTP ${res.status}`;
     try {
@@ -27,5 +28,3 @@ export async function api<T>(
   }
   return text ? (JSON.parse(text) as T) : (null as T);
 }
-
-export { API_URL };

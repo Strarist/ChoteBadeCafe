@@ -25,8 +25,8 @@ function waitMinutes(readyAt: string | null, createdAt: string) {
 }
 
 export default function App() {
-  const [staffName, setStaffName] = useState('Cashier');
-  const [staffPin, setStaffPin] = useState('3456');
+  const [staffName, setStaffName] = useState(import.meta.env.PROD ? '' : 'Cashier');
+  const [staffPin, setStaffPin] = useState(import.meta.env.PROD ? '' : '3456');
   const [authedName, setAuthedName] = useState<string | null>(
     localStorage.getItem('counter-auth-name'),
   );
@@ -238,7 +238,7 @@ export default function App() {
           <button type="button" className="primary" onClick={() => void login()}>
             Unlock POS
           </button>
-          <p className="empty">Demo: Cashier / 3456</p>
+          {!import.meta.env.PROD && <p className="empty">Demo: Cashier / 3456</p>}
         </section>
       </div>
     );

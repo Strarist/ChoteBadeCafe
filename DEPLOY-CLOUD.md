@@ -1,5 +1,8 @@
 # Free deploy (no credit card)
 
+**VITE_API_URL is the Web Service, not a Static Site.**  
+If Counter/Admin show `Cannot POST //auth/staff/login`, the env has a trailing slash or points at a website. Open `https://<that-host>/health` — you must see JSON. Then rebuild the Static Site.
+
 **Do not use Render → New → Blueprint.** Blueprints often demand billing even when the app can run on Free instances.
 
 Create each service **by hand** and pick **Free** every time.
@@ -134,7 +137,8 @@ Create **three** Static Sites from the same repo. **New +** → **Static Site** 
 | Build command | `corepack enable && pnpm install --frozen-lockfile && pnpm --filter @cafe/customer-app build` |
 | Publish directory | `apps/customer-app/dist` |
 
-Add env var **`VITE_API_URL`** = `https://chote-bade-api.onrender.com`  
+Add env var **`VITE_API_URL`** = the **Web Service** URL (the one whose `/health` is JSON).  
+**Not** `chote-bade.onrender.com` or any Static Site. No trailing slash.  
 (Redirects / rewrites: **Add Rewrite** → Source `/*` → Destination `/index.html`.)
 
 **Counter**

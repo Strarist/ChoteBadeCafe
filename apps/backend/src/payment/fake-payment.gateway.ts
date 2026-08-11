@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import type { RazorpayCheckoutPayload } from '@cafe/shared-types';
 import type { PaymentGateway } from './payment-gateway.interface';
 
@@ -22,6 +22,9 @@ export class FakePaymentGateway implements PaymentGateway {
   }
 
   async verifyAndParseWebhook(rawBody: Buffer, _signature: string | undefined) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new ForbiddenException('Unsigned fake payment webhooks are disabled in production');
+    }
     const payload = JSON.parse(rawBody.toString('utf8')) as {
       event?: string;
       payload?: {

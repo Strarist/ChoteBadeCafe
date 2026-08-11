@@ -17,18 +17,13 @@ import {
   type OrderStatusChangedPayload,
 } from '@cafe/shared-types';
 import { ConfigService } from '@nestjs/config';
+import { parseCorsOrigins } from '../cors.util';
 
 type StatusListener = (payload: OrderStatusChangedPayload) => void | Promise<void>;
 
 @WebSocketGateway({
   cors: {
-    origin: (
-      process.env.CORS_ORIGINS ??
-      'http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174'
-    )
-      .split(',')
-      .map((origin) => origin.trim())
-      .filter(Boolean),
+    origin: parseCorsOrigins(process.env.CORS_ORIGINS),
     credentials: true,
   },
 })

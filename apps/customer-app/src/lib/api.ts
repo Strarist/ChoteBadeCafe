@@ -1,9 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL ?? '/api';
-
-function socketUrl() {
-  if (/^https?:\/\//i.test(API_URL)) return new URL(API_URL).origin;
-  return typeof window !== 'undefined' ? window.location.origin : '';
-}
+import { joinApiUrl, socketOrigin, throwIfNotJson } from '../../../../packages/frontend-api.ts';
 
 const ORDER_ACCESS_KEY = 'cafe-order-access';
 
@@ -28,7 +23,7 @@ function readAccessMap(): Record<string, string> {
 async function request<T>(path: string, init: RequestInit = {}, orderId?: string): Promise<T> {
   const { headers: initHeaders, ...rest } = init;
   const access = orderId ? getOrderAccess(orderId) : null;
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await fetch(joinApiUrl(path), {
     ...rest,
     headers: {
       'Content-Type': 'application/json',
@@ -38,6 +33,7 @@ async function request<T>(path: string, init: RequestInit = {}, orderId?: string
   });
   if (!res.ok) {
     const text = await res.text();
+    throwIfNotJson(res, text);
     let message = text || `HTTP ${res.status}`;
     try {
       const parsed = JSON.parse(text) as { message?: string | string[] };
@@ -53,7 +49,7 @@ async function request<T>(path: string, init: RequestInit = {}, orderId?: string
 }
 
 export const api = {
-  url: socketUrl(),
+  url: socketOrigin(),
   get: <T>(path: string, orderId?: string) => request<T>(path, {}, orderId),
   post: <T>(path: string, body?: unknown, orderId?: string) =>
     request<T>(

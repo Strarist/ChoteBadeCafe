@@ -7,6 +7,9 @@ export class IntegrationsHealthController {
 
   @Get('integrations')
   readiness() {
+    if (process.env.NODE_ENV === 'production') {
+      return { timestamp: new Date().toISOString(), ok: true };
+    }
     return {
       timestamp: new Date().toISOString(),
       ...this.integrations.getReadiness(),

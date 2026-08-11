@@ -20,8 +20,8 @@ const TOKEN_KEY = 'cafe-admin-token';
 export default function App() {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
   const [me, setMe] = useState<MeResponse | null>(null);
-  const [name, setName] = useState('Admin');
-  const [pin, setPin] = useState('1234');
+  const [name, setName] = useState(import.meta.env.PROD ? '' : 'Admin');
+  const [pin, setPin] = useState(import.meta.env.PROD ? '' : '1234');
   const [tab, setTab] = useState<Tab>('integrations');
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);

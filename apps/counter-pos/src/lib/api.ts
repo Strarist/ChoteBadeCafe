@@ -1,9 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL ?? '/api';
-
-function socketUrl() {
-  if (/^https?:\/\//i.test(API_URL)) return new URL(API_URL).origin;
-  return typeof window !== 'undefined' ? window.location.origin : '';
-}
+import { joinApiUrl, socketOrigin, throwIfNotJson } from '../../../../packages/frontend-api.ts';
 
 let authToken: string | null = localStorage.getItem('counter-auth-token');
 
@@ -19,7 +14,7 @@ export function getAuthToken() {
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const { headers: initHeaders, ...rest } = init;
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await fetch(joinApiUrl(path), {
     ...rest,
     headers: {
       'Content-Type': 'application/json',
@@ -29,6 +24,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   });
   if (!res.ok) {
     const text = await res.text();
+    throwIfNotJson(res, text);
     let message = text || `HTTP ${res.status}`;
     try {
       const parsed = JSON.parse(text) as { message?: string | string[] };
@@ -45,7 +41,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 
 export const api = {
   /** Socket.IO origin — same host in dev; Render API origin when VITE_API_URL is absolute. */
-  url: socketUrl(),
+  url: socketOrigin(),
   get: <T>(path: string) => request<T>(path),
   post: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: 'POST', body: body ? JSON.stringify(body) : undefined }),

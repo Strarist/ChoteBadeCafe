@@ -39,6 +39,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@cafe/shared-types': path.resolve(rootDir, '../../packages/shared-types/src/index.ts'),
+      '@cafe/frontend-api': path.resolve(rootDir, '../../packages/frontend-api.ts'),
     },
   },
   server: {

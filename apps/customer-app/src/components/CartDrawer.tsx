@@ -245,15 +245,17 @@ export function CartDrawer() {
                 >
                   Pay at counter
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setPayMethod("upi")}
-                  className={`rounded-2xl px-4 py-3.5 text-left text-sm font-semibold transition active:scale-[0.98] ${
-                    payMethod === "upi" ? "bg-burgundy text-cream" : "glass-soft text-ink"
-                  }`}
-                >
-                  Pay online (UPI / card)
-                </button>
+                {!import.meta.env.PROD && (
+                  <button
+                    type="button"
+                    onClick={() => setPayMethod("upi")}
+                    className={`rounded-2xl px-4 py-3.5 text-left text-sm font-semibold transition active:scale-[0.98] ${
+                      payMethod === "upi" ? "bg-burgundy text-cream" : "glass-soft text-ink"
+                    }`}
+                  >
+                    Pay online (UPI / card) — local mock
+                  </button>
+                )}
               </div>
             </div>
           )}
