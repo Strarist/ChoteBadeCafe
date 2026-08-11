@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react"
 import { ArrowUpRight, BookOpen, Coffee, Users, UtensilsCrossed } from "lucide-react"
 import { Link } from "react-router-dom"
 import { Marquee } from "../components/Marquee"
@@ -14,12 +15,33 @@ const iconMap = {
   book: BookOpen,
 }
 
+const CURTAIN_KEY = "cb-home-curtain"
+
 export function HomePage() {
   const tiltRef = useTilt(7)
   const orderNow = useOrderNow()
+  const [curtain, setCurtain] = useState(false)
+
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
+    try {
+      if (sessionStorage.getItem(CURTAIN_KEY)) return
+      sessionStorage.setItem(CURTAIN_KEY, "1")
+      setCurtain(true)
+    } catch {
+      /* private mode */
+    }
+  }, [])
 
   return (
     <>
+      {curtain ? (
+        <div
+          className="landing-curtain"
+          aria-hidden
+          onAnimationEnd={() => setCurtain(false)}
+        />
+      ) : null}
       <section className="relative overflow-hidden pt-28 md:pt-32">
         <div
           className="pointer-events-none absolute -left-32 top-24 h-72 w-72 rounded-full bg-burgundy/10 blur-3xl"
@@ -58,7 +80,7 @@ export function HomePage() {
               ref={tiltRef}
               className="arch-frame media-card relative aspect-[3/4.35] bg-[#ded9ce] shadow-[0_28px_70px_rgba(50,38,27,0.16)] will-change-transform"
             >
-              <div className="img-pop absolute inset-0">
+              <div className="img-pop hero-photo absolute inset-0">
                 <img
                   src={images.heroInterior}
                   alt="Warm arched interior of Chote Bade Café"

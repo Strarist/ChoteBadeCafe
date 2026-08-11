@@ -32,6 +32,19 @@ export function Header() {
   }, [open])
 
   useEffect(() => {
+    setOpen(false)
+  }, [location.pathname])
+
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false)
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [open])
+
+  useEffect(() => {
     if (itemCount > prevCount.current) {
       setBadgeBump(true)
       const t = window.setTimeout(() => setBadgeBump(false), 700)
@@ -68,107 +81,115 @@ export function Header() {
   }, [])
 
   return (
-    <header
-      className={`fixed inset-x-0 top-0 z-50 transition-all duration-[800ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
-        scrolled || open ? "header-glass-scrolled" : "header-glass"
-      }`}
-    >
-      <div className="mx-auto flex h-[4.6rem] max-w-[1400px] items-center justify-between gap-4 px-5 md:px-8">
-        <Logo />
-
-        <nav
-          ref={navRef}
-          className="relative hidden items-center gap-1 rounded-full px-1.5 py-1.5 lg:flex glass-soft"
-        >
-          <span
-            className="nav-pill pointer-events-none absolute top-1.5 bottom-1.5 rounded-full bg-cream/55 shadow-[0_1px_0_rgba(50,38,27,0.06),0_8px_20px_rgba(122,47,58,0.08)]"
-            style={{
-              width: pill.width,
-              transform: `translateX(${pill.left}px)`,
-              opacity: pill.ready ? 1 : 0,
-            }}
-            aria-hidden
-          />
-          {navLinks.map((link) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              className={({ isActive }) =>
-                `relative z-[1] rounded-full px-3.5 py-2 text-[0.9rem] font-medium tracking-[-0.01em] transition-colors duration-500 ${
-                  isActive ? "text-burgundy" : "text-ink/85 hover:text-burgundy"
-                }`
-              }
-            >
-              {link.label}
-            </NavLink>
-          ))}
-        </nav>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={openCart}
-            aria-label={`View your table${itemCount ? `, ${itemCount} items` : ""}`}
-            className="relative grid size-10 place-items-center rounded-full text-ink transition duration-500 glass-soft hover:-translate-y-0.5"
-          >
-            <ShoppingBag size={18} strokeWidth={1.7} />
-            {itemCount > 0 && (
-              <span
-                className={`absolute -right-0.5 -top-0.5 grid min-w-5 place-items-center rounded-full bg-clay px-1 text-[0.65rem] font-semibold leading-5 text-cream transition duration-500 ${
-                  badgeBump ? "scale-125" : "scale-100"
-                }`}
-              >
-                {itemCount}
-              </span>
-            )}
-          </button>
-          <button type="button" onClick={orderNow} className="btn-pill btn-clay hidden sm:inline-flex">
-            Order Now
-          </button>
-          <button
-            type="button"
-            className="grid size-10 place-items-center rounded-full text-ink transition duration-500 glass-soft hover:-translate-y-0.5 lg:hidden"
-            aria-label={open ? "Close menu" : "Open menu"}
-            onClick={() => setOpen((v) => !v)}
-          >
-            {open ? <X size={20} /> : <Menu size={20} />}
-          </button>
-        </div>
-      </div>
-
-      <div
-        className={`overflow-hidden transition-all duration-[800ms] ease-[cubic-bezier(0.22,1,0.36,1)] lg:hidden ${
-          open ? "max-h-[420px] opacity-100" : "max-h-0 opacity-0"
+    <>
+      <header
+        className={`fixed inset-x-0 top-0 z-50 transition-all duration-[800ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
+          scrolled || open ? "header-glass-scrolled" : "header-glass"
         }`}
       >
-        <nav className="mx-4 mb-4 flex flex-col gap-1 rounded-[1.5rem] p-3 glass-strong">
-          {navLinks.map((link, i) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              onClick={() => setOpen(false)}
-              style={{ transitionDelay: open ? `${i * 70}ms` : "0ms" }}
-              className={({ isActive }) =>
-                `rounded-2xl px-4 py-3 text-lg font-medium transition duration-500 ${
-                  isActive ? "bg-cream/55 text-burgundy" : "text-ink hover:bg-cream/35"
-                }`
-              }
+        <div className="mx-auto flex h-[4.6rem] max-w-[1400px] items-center justify-between gap-4 px-5 md:px-8">
+          <Logo />
+
+          <nav
+            ref={navRef}
+            className="relative hidden items-center gap-1 rounded-full px-1.5 py-1.5 lg:flex glass-soft"
+          >
+            <span
+              className="nav-pill pointer-events-none absolute top-1.5 bottom-1.5 rounded-full bg-cream/70 shadow-[0_1px_0_rgba(50,38,27,0.06),0_8px_20px_rgba(122,47,58,0.08)]"
+              style={{
+                width: pill.width,
+                transform: `translateX(${pill.left}px)`,
+                opacity: pill.ready ? 1 : 0,
+              }}
+              aria-hidden
+            />
+            {navLinks.map((link) => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                className={({ isActive }) =>
+                  `relative z-[1] rounded-full px-3.5 py-2 text-[0.9rem] font-medium tracking-[-0.01em] transition-colors duration-500 ${
+                    isActive ? "text-burgundy" : "text-ink/85 hover:text-burgundy"
+                  }`
+                }
+              >
+                {link.label}
+              </NavLink>
+            ))}
+          </nav>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={openCart}
+              aria-label={`View your table${itemCount ? `, ${itemCount} items` : ""}`}
+              className="relative grid size-10 place-items-center rounded-full text-ink transition duration-500 glass-soft hover:-translate-y-0.5"
             >
-              {link.label}
-            </NavLink>
-          ))}
+              <ShoppingBag size={18} strokeWidth={1.7} />
+              {itemCount > 0 && (
+                <span
+                  className={`absolute -right-0.5 -top-0.5 grid min-w-5 place-items-center rounded-full bg-clay px-1 text-[0.65rem] font-semibold leading-5 text-cream transition duration-500 ${
+                    badgeBump ? "scale-125" : "scale-100"
+                  }`}
+                >
+                  {itemCount}
+                </span>
+              )}
+            </button>
+            <button type="button" onClick={orderNow} className="btn-pill btn-clay hidden sm:inline-flex">
+              Order Now
+            </button>
+            <button
+              type="button"
+              className="grid size-10 place-items-center rounded-full text-ink transition duration-500 glass-soft hover:-translate-y-0.5 lg:hidden"
+              aria-label={open ? "Close menu" : "Open menu"}
+              aria-expanded={open}
+              onClick={() => setOpen((v) => !v)}
+            >
+              {open ? <X size={20} /> : <Menu size={20} />}
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {open ? (
+        <div className="fixed inset-x-0 top-[4.6rem] bottom-0 z-40 lg:hidden" role="dialog" aria-modal="true">
           <button
             type="button"
-            onClick={() => {
-              setOpen(false)
-              orderNow()
-            }}
-            className="btn-pill btn-clay mt-2 justify-center"
-          >
-            Order Now
-          </button>
-        </nav>
-      </div>
-    </header>
+            className="mobile-sheet-backdrop absolute inset-0"
+            aria-label="Close menu"
+            onClick={() => setOpen(false)}
+          />
+          <nav className="relative flex h-full min-h-[70dvh] flex-col gap-1 overflow-y-auto px-5 pb-10 pt-6 glass-strong">
+            {navLinks.map((link, i) => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                onClick={() => setOpen(false)}
+                style={{ animationDelay: `${80 + i * 60}ms` }}
+                className={({ isActive }) =>
+                  `mobile-nav-link rounded-2xl px-4 py-3.5 text-xl font-medium ${
+                    isActive ? "bg-cream/70 text-burgundy" : "text-ink hover:bg-cream/45"
+                  }`
+                }
+              >
+                {link.label}
+              </NavLink>
+            ))}
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false)
+                orderNow()
+              }}
+              style={{ animationDelay: `${80 + navLinks.length * 60}ms` }}
+              className="btn-pill btn-clay mobile-nav-link mt-4 justify-center"
+            >
+              Order Now
+            </button>
+          </nav>
+        </div>
+      ) : null}
+    </>
   )
 }
