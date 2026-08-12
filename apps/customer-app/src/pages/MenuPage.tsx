@@ -6,7 +6,7 @@ import { getCatalogEntry } from "../data/menuCatalog"
 import { Appear, EmergeLine, PageIntro } from "../components/MotionText"
 import { Reveal } from "../components/Reveal"
 import { useCart } from "../context/CartContext"
-import { api } from "../lib/api"
+import { fetchMenu, peekMenuCache } from "../lib/menuCache"
 
 type MenuView = "photos" | "whole"
 
@@ -270,12 +270,15 @@ function WholeMenu({
 }
 
 export function MenuPage() {
-  const [sections, setSections] = useState<MenuSection[]>([])
+  const cached = peekMenuCache()
+  const [sections, setSections] = useState<MenuSection[]>(() =>
+    cached ? toSections(cached) : [],
+  )
   const [filter, setFilter] = useState<string>("all")
   const [view, setView] = useState<MenuView>("photos")
   const [filterVisible, setFilterVisible] = useState(true)
   const [justAdded, setJustAdded] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!cached)
   const [error, setError] = useState<string | null>(null)
   const { addItem, increment, decrement, items } = useCart()
 
@@ -283,9 +286,9 @@ export function MenuPage() {
     let cancelled = false
 
     async function loadMenu() {
-      setLoading(true)
+      if (!peekMenuCache()) setLoading(true)
       try {
-        const data = await api.get<ApiMenuItem[]>("/menu")
+        const data = await fetchMenu()
         if (!cancelled) {
           setSections(toSections(data))
           setError(null)
@@ -322,7 +325,7 @@ export function MenuPage() {
 
   useEffect(() => {
     setFilterVisible(false)
-    const t = window.setTimeout(() => setFilterVisible(true), 180)
+    const t = window.setTimeout(() => setFilterVisible(true), 40)
     return () => window.clearTimeout(t)
   }, [filter, view])
 
@@ -430,6 +433,11 @@ export function MenuPage() {
           {error && (
             <p className="text-sm text-burgundy">
               Could not load menu from the kitchen system: {error}
+            </p>
+          )}
+          {!loading && !error && sections.length === 0 && (
+            <p className="text-sm text-ink-muted">
+              The menu is empty right now. Ask the kitchen to run a menu sync, or seed the database.
             </p>
           )}
 

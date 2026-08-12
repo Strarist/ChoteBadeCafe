@@ -24,13 +24,18 @@ import { StaffAuthGuard, type AuthenticatedRequest } from '../auth/staff-auth.gu
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { OrderOrStaffAccessGuard } from '../auth/order-or-staff.guard';
+import { InMemoryRateLimit } from '../common/in-memory-rate-limit';
+import type { Request } from 'express';
 
 @Controller('orders')
 export class OrderController {
+  private readonly createIpLimit = new InMemoryRateLimit(30, 60 * 1000);
+
   constructor(private readonly orders: OrderService) {}
 
   @Post()
-  create(@Body() dto: CreateOrderDto): Promise<OrderDetail> {
+  create(@Req() req: Request, @Body() dto: CreateOrderDto): Promise<OrderDetail> {
+    this.createIpLimit.hit(`orders:${req.ip ?? 'unknown'}`);
     return this.orders.create(dto);
   }
 

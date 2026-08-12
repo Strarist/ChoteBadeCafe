@@ -125,6 +125,7 @@ export interface OrderStatusLog {
 export const SOCKET_EVENTS = {
   PING: 'ping',
   PONG: 'pong',
+  JOIN_STAFF: 'staff:join',
   ORDER_CREATED: 'order:created',
   ORDER_STATUS_CHANGED: 'order:status_changed',
   ORDER_PAYMENT_FAILED: 'order:payment_failed',
@@ -154,8 +155,9 @@ export interface OrderPaymentFailedPayload {
 export interface HealthResponse {
   status: 'ok' | 'degraded';
   timestamp: string;
-  database: 'up' | 'down';
-  redis: 'up' | 'down' | 'skipped';
+  /** Omitted on public production responses. */
+  database?: 'up' | 'down';
+  redis?: 'up' | 'down' | 'skipped';
 }
 
 export interface CreateOrderItemInput {

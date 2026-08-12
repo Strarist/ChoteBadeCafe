@@ -14,12 +14,17 @@ export class HealthService {
     const [database, redis] = await Promise.all([this.checkDatabase(), this.checkRedis()]);
 
     const ok = database === 'up' && redis !== 'down';
-    return {
+    const base: HealthResponse = {
       status: ok ? 'ok' : 'degraded',
       timestamp: new Date().toISOString(),
-      database,
-      redis,
     };
+
+    // Public production health stays opaque — detailed probes belong on authenticated admin routes.
+    if (process.env.NODE_ENV === 'production') {
+      return base;
+    }
+
+    return { ...base, database, redis };
   }
 
   private async checkDatabase(): Promise<'up' | 'down'> {

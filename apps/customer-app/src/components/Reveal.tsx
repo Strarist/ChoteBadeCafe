@@ -15,6 +15,13 @@ const variantClass = {
   right: "reveal-right",
 } as const
 
+function isNearViewport(el: HTMLElement) {
+  const rect = el.getBoundingClientRect()
+  const vh = window.innerHeight || 0
+  // Generous margin so above-the-fold content paints visible on the first frame after route swap
+  return rect.top < vh * 1.15 && rect.bottom > -vh * 0.1
+}
+
 export function Reveal({
   children,
   className = "",
@@ -30,7 +37,7 @@ export function Reveal({
     if (!el) return
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    if (reduced) {
+    if (reduced || isNearViewport(el)) {
       setInView(true)
       return
     }
@@ -42,7 +49,7 @@ export function Reveal({
           observer.unobserve(el)
         }
       },
-      { threshold: 0.12, rootMargin: "0px 0px -6% 0px" },
+      { threshold: 0.08, rootMargin: "80px 0px 0px 0px" },
     )
 
     observer.observe(el)

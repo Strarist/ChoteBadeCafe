@@ -1,4 +1,4 @@
-import { joinApiUrl, socketOrigin, throwIfNotJson } from '../../../../packages/frontend-api.ts';
+import { joinApiUrl, parseJsonBody, socketOrigin, throwIfNotJson } from '../../../../packages/frontend-api.ts';
 
 const ORDER_ACCESS_KEY = 'cafe-order-access';
 
@@ -31,8 +31,8 @@ async function request<T>(path: string, init: RequestInit = {}, orderId?: string
       ...(initHeaders ?? {}),
     },
   });
+  const text = await res.text();
   if (!res.ok) {
-    const text = await res.text();
     throwIfNotJson(res, text);
     let message = text || `HTTP ${res.status}`;
     try {
@@ -45,7 +45,7 @@ async function request<T>(path: string, init: RequestInit = {}, orderId?: string
     }
     throw new Error(message);
   }
-  return res.json() as Promise<T>;
+  return parseJsonBody<T>(res, text);
 }
 
 export const api = {

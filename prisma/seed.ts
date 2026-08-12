@@ -64,6 +64,10 @@ async function main() {
       }
       continue;
     }
+    if (isProd) {
+      console.log(`Skipping default staff "${s.name}" in production — create staff via Admin with a strong PIN`);
+      continue;
+    }
     await prisma.staffUser.create({
       data: { name: s.name, role: s.role, pinHash: await bcrypt.hash(s.pin, 10), isActive: true },
     });
@@ -74,6 +78,8 @@ async function main() {
   console.log(`Seeded menu items: ${count}; staff users: ${staffCount}`);
   if (!isProd) {
     console.log('Default PINs — Admin/1234, Manager/2345, Cashier/3456 (change in production)');
+  } else if (staffCount === 0) {
+    console.warn('No staff users in production DB — create an admin via a one-time bootstrap before go-live');
   }
 }
 

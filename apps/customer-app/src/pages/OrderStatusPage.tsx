@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react"
 import { Link, useParams } from "react-router-dom"
-import { io } from "socket.io-client"
 import type { OrderDetail } from "@cafe/shared-types"
-import { SOCKET_EVENTS } from "@cafe/shared-types"
 import { api } from "../lib/api"
 import { Appear, PageIntro } from "../components/MotionText"
 
@@ -28,17 +26,12 @@ export function OrderStatusPage() {
     }
 
     void load()
-    const socket = io(api.url, { transports: ["websocket", "polling"] })
-    socket.on(SOCKET_EVENTS.ORDER_STATUS_CHANGED, (payload: { orderId: string }) => {
-      if (payload.orderId === orderId) void load()
-    })
-    socket.on(SOCKET_EVENTS.ORDER_PAYMENT_FAILED, (payload: { orderId: string }) => {
-      if (payload.orderId === orderId) void load()
-    })
+    // Prefer short polling over public Socket.IO order events (staff-only rooms now).
+    const poll = window.setInterval(() => void load(), 2500)
 
     return () => {
       cancelled = true
-      socket.disconnect()
+      window.clearInterval(poll)
     }
   }, [orderId])
 

@@ -88,6 +88,10 @@ export default function App() {
     void refreshQueues();
     const socket = io(api.url, { transports: ['websocket', 'polling'] });
     const reload = () => void refreshQueues();
+    const token = getAuthToken();
+    if (token) {
+      socket.emit(SOCKET_EVENTS.JOIN_STAFF, { token });
+    }
     socket.on(SOCKET_EVENTS.ORDER_CREATED, reload);
     socket.on(SOCKET_EVENTS.ORDER_STATUS_CHANGED, reload);
     socket.on(SOCKET_EVENTS.MENU_UPDATED, () => {

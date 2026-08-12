@@ -7,10 +7,17 @@ import { CartDrawer } from "./CartDrawer"
 import { CartBar } from "./CartBar"
 import { PageTransition } from "./PageTransition"
 import { getLenis, useSmoothScroll } from "../hooks/useSmoothScroll"
+import { prefetchMenu } from "../lib/menuCache"
+import { warmApi } from "../lib/warmApi"
 
 export function Layout() {
   const { pathname } = useLocation()
   useSmoothScroll()
+
+  useEffect(() => {
+    warmApi()
+    prefetchMenu()
+  }, [])
 
   useEffect(() => {
     const titles: Record<string, string> = {

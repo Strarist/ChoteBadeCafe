@@ -15,6 +15,7 @@ import type {
 } from '@cafe/shared-types';
 import { PrismaService } from '../prisma/prisma.service';
 import { IntegrationsConfigService } from '../integrations/integrations-config.service';
+import { assertPinPolicy } from './pin-policy';
 
 const TOKEN_TTL_MS = 12 * 60 * 60 * 1000; // 12h
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
@@ -129,9 +130,9 @@ export class AuthService {
     role: StaffRole;
     pin: string;
   }): Promise<StaffUser> {
-    if (input.pin.length < 4) throw new BadRequestException('PIN must be at least 4 digits');
+    assertPinPolicy(input.pin);
     const existing = await this.prisma.staffUser.findFirst({
-      where: { name: input.name.trim() },
+      where: { name: { equals: input.name.trim(), mode: 'insensitive' } },
     });
     if (existing) throw new BadRequestException('Staff name already exists');
     const pinHash = await bcrypt.hash(input.pin, 10);
@@ -151,6 +152,7 @@ export class AuthService {
   ): Promise<StaffUser> {
     const existing = await this.prisma.staffUser.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('Staff not found');
+    if (input.pin) assertPinPolicy(input.pin);
     if (input.isActive === false && existing.role === 'admin') {
       const adminCount = await this.prisma.staffUser.count({
         where: { role: 'admin', isActive: true },

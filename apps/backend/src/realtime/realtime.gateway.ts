@@ -18,6 +18,9 @@ import {
 } from '@cafe/shared-types';
 import { ConfigService } from '@nestjs/config';
 import { parseCorsOrigins } from '../cors.util';
+import { AuthService } from '../auth/auth.service';
+
+const STAFF_ROOM = 'staff';
 
 type StatusListener = (payload: OrderStatusChangedPayload) => void | Promise<void>;
 
@@ -36,7 +39,10 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   @WebSocketServer()
   server!: Server;
 
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly auth: AuthService,
+  ) {}
 
   async afterInit(server: Server): Promise<void> {
     const redisUrl = this.configService.get<string>('REDIS_URL');
@@ -74,16 +80,29 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
     });
   }
 
+  /** Counter / admin join after Bearer login — required for order event streams. */
+  @SubscribeMessage(SOCKET_EVENTS.JOIN_STAFF)
+  async handleJoinStaff(client: Socket, data: { token?: string }): Promise<{ ok: boolean }> {
+    try {
+      const token = typeof data?.token === 'string' ? data.token : '';
+      await this.auth.verifyTokenLive(token);
+      await client.join(STAFF_ROOM);
+      return { ok: true };
+    } catch {
+      return { ok: false };
+    }
+  }
+
   onStatusChanged(listener: StatusListener): void {
     this.statusListeners.push(listener);
   }
 
   emitOrderCreated(payload: OrderCreatedPayload): void {
-    this.server?.emit(SOCKET_EVENTS.ORDER_CREATED, payload);
+    this.server?.to(STAFF_ROOM).emit(SOCKET_EVENTS.ORDER_CREATED, payload);
   }
 
   emitOrderStatusChanged(payload: OrderStatusChangedPayload): void {
-    this.server?.emit(SOCKET_EVENTS.ORDER_STATUS_CHANGED, payload);
+    this.server?.to(STAFF_ROOM).emit(SOCKET_EVENTS.ORDER_STATUS_CHANGED, payload);
     for (const listener of this.statusListeners) {
       void Promise.resolve(listener(payload)).catch((err: unknown) => {
         this.logger.error(`Status listener error: ${String(err)}`);
@@ -92,7 +111,7 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection, OnGa
   }
 
   emitOrderPaymentFailed(payload: OrderPaymentFailedPayload): void {
-    this.server?.emit(SOCKET_EVENTS.ORDER_PAYMENT_FAILED, payload);
+    this.server?.to(STAFF_ROOM).emit(SOCKET_EVENTS.ORDER_PAYMENT_FAILED, payload);
   }
 
   emitMenuUpdated(): void {

@@ -22,3 +22,13 @@ export function throwIfNotJson(res: Response, text: string): void {
     );
   }
 }
+
+/** Reject HTML masquerading as a successful API response (common misconfigured Static Site). */
+export function parseJsonBody<T>(res: Response, text: string): T {
+  throwIfNotJson(res, text);
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error(`API returned non-JSON (HTTP ${res.status}). Check VITE_API_URL and redeploy.`);
+  }
+}

@@ -539,10 +539,10 @@
 
   .reveal {
     opacity: 0;
-    transform: translateY(42px);
+    transform: translateY(18px);
     transition:
-      opacity 1.05s var(--ease-premium),
-      transform 1.05s var(--ease-premium);
+      opacity 0.45s var(--ease-premium),
+      transform 0.45s var(--ease-premium);
     will-change: opacity, transform;
   }
 
@@ -665,20 +665,10 @@
 
   .page-shell {
     min-height: 40vh;
-    transition:
-      opacity 0.34s var(--ease-premium),
-      transform 0.5s var(--ease-premium);
-    will-change: opacity, transform;
-  }
-
-  .page-shell.is-exiting {
-    opacity: 0;
-    transform: translateY(-10px);
-    pointer-events: none;
   }
 
   .page-shell.is-entering {
-    animation: page-shell-enter 0.7s var(--ease-premium) both;
+    animation: page-shell-enter 90ms var(--ease-premium) both;
   }
 
   .nav-pill {
@@ -878,8 +868,8 @@
 
 @keyframes page-shell-enter {
   from {
-    opacity: 0;
-    transform: translateY(14px);
+    opacity: 0.92;
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
@@ -1004,7 +994,6 @@
   .float-soft-delay-2,
   .page-enter,
   .page-shell.is-entering,
-  .page-shell.is-exiting,
   .img-zoom,
   .hero-photo img,
   .landing-curtain,
@@ -1018,12 +1007,6 @@
 
   .landing-curtain {
     display: none;
-  }
-
-  .page-shell.is-exiting {
-    opacity: 0;
-    filter: none;
-    transform: none;
   }
 
   .nav-pill {

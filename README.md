@@ -33,9 +33,8 @@ Before the first push: `pnpm check:secrets`. GitHub also runs this on every push
 |---|---|
 | [DEPLOY.md](./DEPLOY.md) | VPS / Docker deploy |
 | [DEPLOY-CLOUD.md](./DEPLOY-CLOUD.md) | Render free-tier cloud |
-| [docs/SITE_HARDENING_REPORT.md](./docs/SITE_HARDENING_REPORT.md) | Mobile UX + menu seed + hardening (readable) |
-| [docs/LOGO_PWA_ICON_PLAN.md](./docs/LOGO_PWA_ICON_PLAN.md) | Logo / PWA icon system plan |
-| [AUDIT.md](./AUDIT.md) | Security / platform backlog |
+
+Internal audit / design reports are kept out of git on purpose.
 
 ## Local setup
 
