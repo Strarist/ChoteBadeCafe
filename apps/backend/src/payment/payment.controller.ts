@@ -7,7 +7,11 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import type { OrderDetail, RazorpayCheckoutPayload } from '@cafe/shared-types';
+import type {
+  OrderDetail,
+  RazorpayCheckoutPayload,
+  RazorpayConfirmInput,
+} from '@cafe/shared-types';
 import { PaymentService } from './payment.service';
 import { OrderOrStaffAccessGuard } from '../auth/order-or-staff.guard';
 
@@ -19,6 +23,19 @@ export class PaymentController {
   @UseGuards(OrderOrStaffAccessGuard('orderId'))
   createCheckout(@Param('orderId') orderId: string): Promise<RazorpayCheckoutPayload> {
     return this.payments.createCheckout(orderId);
+  }
+
+  @Post('orders/:orderId/confirm')
+  @UseGuards(OrderOrStaffAccessGuard('orderId'))
+  confirmPayment(
+    @Param('orderId') orderId: string,
+    @Body() body: RazorpayConfirmInput,
+  ): Promise<OrderDetail> {
+    return this.payments.confirmPayment(orderId, {
+      razorpayOrderId: body.razorpayOrderId,
+      razorpayPaymentId: body.razorpayPaymentId,
+      razorpaySignature: body.razorpaySignature,
+    });
   }
 
   @Post('orders/:orderId/mock-confirm')

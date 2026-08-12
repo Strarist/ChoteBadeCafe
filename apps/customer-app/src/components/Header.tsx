@@ -1,24 +1,21 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import { NavLink, useLocation } from "react-router-dom"
-import { Menu, ShoppingBag, X } from "lucide-react"
+import { ArrowUpRight, Menu, X } from "lucide-react"
 import { Logo } from "./Logo"
 import { navLinks } from "../data/site"
-import { useCart } from "../context/CartContext"
 import { useOrderNow } from "../hooks/useOrderNow"
+import { getLenis } from "../hooks/useSmoothScroll"
 
 export function Header() {
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
-  const { itemCount, openCart } = useCart()
   const orderNow = useOrderNow()
-  const [badgeBump, setBadgeBump] = useState(false)
-  const prevCount = useRef(itemCount)
   const location = useLocation()
   const navRef = useRef<HTMLElement>(null)
   const [pill, setPill] = useState({ left: 0, width: 0, ready: false })
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8)
+    const onScroll = () => setScrolled(window.scrollY > 12)
     onScroll()
     window.addEventListener("scroll", onScroll, { passive: true })
     return () => window.removeEventListener("scroll", onScroll)
@@ -26,8 +23,11 @@ export function Header() {
 
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : ""
+    if (open) getLenis()?.stop()
+    else getLenis()?.start()
     return () => {
       document.body.style.overflow = ""
+      getLenis()?.start()
     }
   }, [open])
 
@@ -43,16 +43,6 @@ export function Header() {
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
   }, [open])
-
-  useEffect(() => {
-    if (itemCount > prevCount.current) {
-      setBadgeBump(true)
-      const t = window.setTimeout(() => setBadgeBump(false), 700)
-      prevCount.current = itemCount
-      return () => window.clearTimeout(t)
-    }
-    prevCount.current = itemCount
-  }, [itemCount])
 
   const updatePill = () => {
     const nav = navRef.current
@@ -83,19 +73,16 @@ export function Header() {
   return (
     <>
       <header
-        className={`fixed inset-x-0 top-0 z-50 transition-all duration-[800ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
-          scrolled || open ? "header-glass-scrolled" : "header-glass"
+        className={`site-header fixed inset-x-0 top-0 z-50 transition-[background,box-shadow,border-color] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+          scrolled || open ? "site-header-scrolled" : ""
         }`}
       >
-        <div className="mx-auto flex h-[4.6rem] max-w-[1400px] items-center justify-between gap-4 px-5 md:px-8">
+        <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between gap-3 px-5 md:h-[4.25rem] md:px-8">
           <Logo />
 
-          <nav
-            ref={navRef}
-            className="relative hidden items-center gap-1 rounded-full px-1.5 py-1.5 lg:flex glass-soft"
-          >
+          <nav ref={navRef} className="relative hidden items-center gap-0.5 lg:flex">
             <span
-              className="nav-pill pointer-events-none absolute top-1.5 bottom-1.5 rounded-full bg-cream/70 shadow-[0_1px_0_rgba(50,38,27,0.06),0_8px_20px_rgba(122,47,58,0.08)]"
+              className="nav-pill pointer-events-none absolute top-0 bottom-0 rounded-full bg-burgundy/[0.08]"
               style={{
                 width: pill.width,
                 transform: `translateX(${pill.left}px)`,
@@ -108,8 +95,8 @@ export function Header() {
                 key={link.to}
                 to={link.to}
                 className={({ isActive }) =>
-                  `relative z-[1] rounded-full px-3.5 py-2 text-[0.9rem] font-medium tracking-[-0.01em] transition-colors duration-500 ${
-                    isActive ? "text-burgundy" : "text-ink/85 hover:text-burgundy"
+                  `relative z-[1] rounded-full px-3.5 py-2 text-[0.88rem] font-medium tracking-[-0.01em] transition-colors duration-300 ${
+                    isActive ? "text-burgundy" : "text-ink/75 hover:text-burgundy"
                   }`
                 }
               >
@@ -121,27 +108,14 @@ export function Header() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={openCart}
-              aria-label={`View your table${itemCount ? `, ${itemCount} items` : ""}`}
-              className="relative grid size-10 place-items-center rounded-full text-ink transition duration-500 glass-soft hover:-translate-y-0.5"
+              onClick={orderNow}
+              className="btn-pill btn-clay hidden !px-4 !py-2 text-[0.8rem] lg:inline-flex"
             >
-              <ShoppingBag size={18} strokeWidth={1.7} />
-              {itemCount > 0 && (
-                <span
-                  className={`absolute -right-0.5 -top-0.5 grid min-w-5 place-items-center rounded-full bg-clay px-1 text-[0.65rem] font-semibold leading-5 text-cream transition duration-500 ${
-                    badgeBump ? "scale-125" : "scale-100"
-                  }`}
-                >
-                  {itemCount}
-                </span>
-              )}
-            </button>
-            <button type="button" onClick={orderNow} className="btn-pill btn-clay hidden sm:inline-flex">
               Order Now
             </button>
             <button
               type="button"
-              className="grid size-10 place-items-center rounded-full text-ink transition duration-500 glass-soft hover:-translate-y-0.5 lg:hidden"
+              className="grid size-10 place-items-center rounded-full border border-ink/10 bg-cream-warm/80 text-ink transition hover:border-burgundy/25 hover:bg-burgundy/[0.06] lg:hidden"
               aria-label={open ? "Close menu" : "Open menu"}
               aria-expanded={open}
               onClick={() => setOpen((v) => !v)}
@@ -153,40 +127,73 @@ export function Header() {
       </header>
 
       {open ? (
-        <div className="fixed inset-x-0 top-[4.6rem] bottom-0 z-40 lg:hidden" role="dialog" aria-modal="true">
+        <div
+          className="fixed inset-x-0 top-16 bottom-0 z-40 md:top-[4.25rem] lg:hidden"
+          role="dialog"
+          aria-modal="true"
+        >
           <button
             type="button"
             className="mobile-sheet-backdrop absolute inset-0"
             aria-label="Close menu"
             onClick={() => setOpen(false)}
           />
-          <nav className="relative flex h-full min-h-[70dvh] flex-col gap-1 overflow-y-auto px-5 pb-10 pt-6 glass-strong">
-            {navLinks.map((link, i) => (
-              <NavLink
-                key={link.to}
-                to={link.to}
-                onClick={() => setOpen(false)}
-                style={{ animationDelay: `${80 + i * 60}ms` }}
-                className={({ isActive }) =>
-                  `mobile-nav-link rounded-2xl px-4 py-3.5 text-xl font-medium ${
-                    isActive ? "bg-cream/70 text-burgundy" : "text-ink hover:bg-cream/45"
-                  }`
-                }
-              >
-                {link.label}
-              </NavLink>
-            ))}
-            <button
-              type="button"
-              onClick={() => {
-                setOpen(false)
-                orderNow()
-              }}
-              style={{ animationDelay: `${80 + navLinks.length * 60}ms` }}
-              className="btn-pill btn-clay mobile-nav-link mt-4 justify-center"
-            >
-              Order Now
-            </button>
+          <nav className="site-mobile-nav relative flex h-full flex-col overflow-hidden">
+            <div className="site-mobile-nav-wash pointer-events-none absolute inset-0" aria-hidden />
+            <div className="relative flex flex-1 flex-col overflow-y-auto px-5 pb-8 pt-6">
+              <p className="text-[0.68rem] font-semibold tracking-[0.18em] text-burgundy">
+                FIND YOUR WAY
+              </p>
+              <div className="mt-5 flex flex-col gap-1.5">
+                {navLinks.map((link, i) => (
+                  <NavLink
+                    key={link.to}
+                    to={link.to}
+                    onClick={() => setOpen(false)}
+                    style={{ animationDelay: `${50 + i * 45}ms` }}
+                    className={({ isActive }) =>
+                      `mobile-nav-link group flex items-center justify-between rounded-2xl border px-4 py-3.5 transition ${
+                        isActive
+                          ? "border-burgundy/20 bg-burgundy/[0.07] text-burgundy shadow-[0_10px_28px_rgba(92,42,50,0.08)]"
+                          : "border-ink/8 bg-cream/70 text-ink shadow-[0_6px_18px_rgba(50,38,27,0.04)] hover:border-burgundy/15 hover:bg-cream"
+                      }`
+                    }
+                  >
+                    <span className="flex items-center gap-3">
+                      <span className="font-mono text-[0.7rem] font-semibold tracking-[0.08em] text-ink-muted">
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+                      <span className="text-lg font-medium tracking-[-0.02em]">{link.label}</span>
+                    </span>
+                    <ArrowUpRight
+                      size={18}
+                      className="text-ink-muted transition group-hover:text-burgundy"
+                    />
+                  </NavLink>
+                ))}
+              </div>
+
+              <div className="mt-auto pt-8">
+                <div className="rounded-3xl border border-ink/8 bg-gradient-to-br from-cream to-cream-warm p-5 shadow-[0_18px_40px_rgba(50,38,27,0.08)]">
+                  <p className="font-display text-xl tracking-[-0.03em] text-burgundy">
+                    Ready for the table?
+                  </p>
+                  <p className="mt-1.5 text-sm text-ink-muted">
+                    Browse the menu and we&apos;ll hold your order until you pay.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpen(false)
+                      orderNow()
+                    }}
+                    className="btn-pill btn-clay mt-4 w-full justify-center !py-2.5 text-sm"
+                  >
+                    Order Now
+                  </button>
+                </div>
+              </div>
+            </div>
           </nav>
         </div>
       ) : null}

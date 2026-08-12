@@ -119,11 +119,12 @@ export class IntegrationsConfigService implements OnModuleInit {
 
   hasRazorpayCredentials(): boolean {
     const keyId = this.config.get<string>('RAZORPAY_KEY_ID');
+    const keySecret = this.config.get<string>('RAZORPAY_KEY_SECRET');
     return Boolean(
       keyId &&
         keyId !== 'mock' &&
-        this.config.get('RAZORPAY_KEY_SECRET') &&
-        this.config.get('RAZORPAY_WEBHOOK_SECRET'),
+        keySecret &&
+        keySecret !== 'mock',
     );
   }
 

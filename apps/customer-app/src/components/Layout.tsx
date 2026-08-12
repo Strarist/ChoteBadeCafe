@@ -4,6 +4,7 @@ import { Header } from "./Header"
 import { Footer } from "./Footer"
 import { PullUpChair } from "./PullUpChair"
 import { CartDrawer } from "./CartDrawer"
+import { CartBar } from "./CartBar"
 import { PageTransition } from "./PageTransition"
 import { getLenis, useSmoothScroll } from "../hooks/useSmoothScroll"
 
@@ -23,7 +24,6 @@ export function Layout() {
     document.title = titles[pathname] ?? "Chote Bade Café"
   }, [pathname])
 
-  // Belt-and-suspenders: every route change starts at the top
   useEffect(() => {
     getLenis()?.scrollToTopImmediate()
     window.scrollTo(0, 0)
@@ -37,11 +37,12 @@ export function Layout() {
         aria-hidden
       />
       <Header />
-      <main className="page-main">
+      <main className="page-main pb-24 md:pb-16">
         <PageTransition />
         <PullUpChair />
       </main>
       <Footer />
+      <CartBar />
       <CartDrawer />
     </div>
   )

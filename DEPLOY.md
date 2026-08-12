@@ -34,7 +34,13 @@ Set at least:
 - `CORS_ORIGINS` — `https://<your-domain>` (or `http://<lan-ip>` for LAN)
 - `PETPOOJA_WEBHOOK_SECRET`
 
-Leave `SEED_ON_BOOT=1` for the first start so placeholder menu + staff PINs exist.
+Leave `SEED_ON_BOOT` unset — the API entrypoint **always** runs `pnpm db:seed` after migrations. Seed is idempotent in production (fills an empty menu / creates default staff once; never wipes an existing menu).
+
+If `/api/menu` is still `[]` on an old deploy:
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env.production exec api pnpm db:seed
+```
 
 ```bash
 pnpm deploy:check
@@ -81,15 +87,36 @@ Point providers at the public API (Caddy strips `/api`):
 | PetPooja order status | `https://<host>/api/petpooja/webhooks/order-status` |
 | Aggregator ingress | `https://<host>/api/petpooja/webhooks/aggregator-order` |
 
-Switch adapters when credentials are real:
+### Razorpay go-live checklist
+
+1. Dashboard → **API Keys** → copy test (then live) Key ID + Secret into env.
+2. Dashboard → **Webhooks** → URL above; enable events:
+   - `payment.captured`
+   - `payment.failed`
+   - `order.paid`
+3. Copy the webhook **signing secret** into `RAZORPAY_WEBHOOK_SECRET`.
+4. Set checkout branding (optional but recommended):
+
+```
+RAZORPAY_CHECKOUT_NAME=Chote Bade Café
+# RAZORPAY_CHECKOUT_LOGO=https://…
+# RAZORPAY_CHECKOUT_THEME_COLOR=#7A1F2B
+```
+
+5. Switch adapters when credentials are real:
 
 ```
 PAYMENT_ADAPTER=live
+ALLOW_FAKE_PAYMENTS=0
 PETPOOJA_ADAPTER=live
 NOTIFICATION_ADAPTER=live
 ```
 
+6. Confirm the reverse proxy forwards the **raw request body** to Nest (`rawBody: true`) so webhook HMAC verification works.
+
 `ALLOW_FAKE_PAYMENTS` must stay off. The API refuses to boot in production if it is `1`.
+
+Customer **Pay online** opens Razorpay Checkout.js, then `POST /payments/orders/:id/confirm` verifies the payment signature. Webhooks remain an idempotent backup.
 
 ## 6. Day-2
 

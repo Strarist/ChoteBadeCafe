@@ -110,7 +110,7 @@ async function main() {
   });
   console.log('collected', collected.status);
 
-  console.log('mock razorpay path');
+  console.log('confirm razorpay signature path');
   const online = await req('/orders', {
     method: 'POST',
     body: JSON.stringify({
@@ -129,10 +129,18 @@ async function main() {
     method: 'POST',
     headers: onlineAccess,
   });
-  const paid = await req(`/payments/orders/${online.id}/mock-confirm`, {
+  const paymentId = `pay_mock_${Date.now()}`;
+  const razorpaySignature = createHmac('sha256', 'mock')
+    .update(`${checkout.razorpayOrderId}|${paymentId}`)
+    .digest('hex');
+  const paid = await req(`/payments/orders/${online.id}/confirm`, {
     method: 'POST',
     headers: onlineAccess,
-    body: JSON.stringify({ razorpayOrderId: checkout.razorpayOrderId }),
+    body: JSON.stringify({
+      razorpayOrderId: checkout.razorpayOrderId,
+      razorpayPaymentId: paymentId,
+      razorpaySignature,
+    }),
   });
   console.log('paid', paid.status, paid.paymentStatus);
 

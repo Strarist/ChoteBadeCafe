@@ -1,11 +1,19 @@
-import { Injectable, ServiceUnavailableException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import type { RazorpayCheckoutPayload } from '@cafe/shared-types';
-import type { PaymentGateway } from './payment-gateway.interface';
+import type { RazorpayCheckoutPayload, RazorpayConfirmInput } from '@cafe/shared-types';
+import type { ParsedPaymentWebhook, PaymentGateway } from './payment-gateway.interface';
+import { parseRazorpayWebhookPayload } from './razorpay-webhook.parser';
+
+const MIN_AMOUNT_PAISE = 100;
 
 /**
- * Live Razorpay Orders API + webhook HMAC.
+ * Live Razorpay Orders API + Checkout signature + webhook HMAC.
  * Selected when PAYMENT_ADAPTER=live and credentials are present.
  */
 @Injectable()
@@ -18,7 +26,14 @@ export class RazorpayPaymentGateway implements PaymentGateway {
     orderId: string;
     amountPaise: number;
     receipt: string;
+    customer?: { name?: string; email?: string | null; mobile?: string };
   }): Promise<RazorpayCheckoutPayload> {
+    if (!Number.isInteger(input.amountPaise) || input.amountPaise < MIN_AMOUNT_PAISE) {
+      throw new BadRequestException(
+        `Amount must be at least ${MIN_AMOUNT_PAISE} paise (₹1). Got ${input.amountPaise}.`,
+      );
+    }
+
     const keyId = this.require('RAZORPAY_KEY_ID');
     const keySecret = this.require('RAZORPAY_KEY_SECRET');
     const auth = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
@@ -31,51 +46,79 @@ export class RazorpayPaymentGateway implements PaymentGateway {
       body: JSON.stringify({
         amount: input.amountPaise,
         currency: 'INR',
-        receipt: input.receipt,
+        receipt: input.receipt.slice(0, 40),
         notes: { cafe_order_id: input.orderId },
       }),
     });
-    if (!res.ok) {
-      throw new ServiceUnavailableException(`Razorpay order create failed: ${await res.text()}`);
+
+    if (res.status === 401 || res.status === 403) {
+      throw new UnauthorizedException(
+        `Razorpay authentication failed (${res.status}). Check RAZORPAY_KEY_ID / KEY_SECRET.`,
+      );
     }
-    const data = (await res.json()) as { id: string; amount: number };
+    if (!res.ok) {
+      throw new ServiceUnavailableException(
+        `Razorpay order create failed (${res.status}): ${await res.text()}`,
+      );
+    }
+
+    const data = (await res.json()) as { id: string; amount: number; currency?: string };
     return {
       orderId: input.orderId,
       razorpayOrderId: data.id,
       amount: data.amount,
       currency: 'INR',
       keyId,
+      ...this.checkoutBranding(input),
     };
   }
 
-  async verifyAndParseWebhook(rawBody: Buffer, signature: string | undefined) {
+  verifyCheckoutSignature(input: RazorpayConfirmInput): boolean {
+    const keySecret = this.require('RAZORPAY_KEY_SECRET');
+    const expected = createHmac('sha256', keySecret)
+      .update(`${input.razorpayOrderId}|${input.razorpayPaymentId}`)
+      .digest('hex');
+    return timingSafeEqualUtf8(expected, input.razorpaySignature);
+  }
+
+  async verifyAndParseWebhook(
+    rawBody: Buffer,
+    signature: string | undefined,
+  ): Promise<ParsedPaymentWebhook> {
     const secret = this.require('RAZORPAY_WEBHOOK_SECRET');
     if (!signature) {
       throw new ServiceUnavailableException('Missing Razorpay signature');
     }
     const expected = createHmac('sha256', secret).update(rawBody).digest('hex');
-    const a = Buffer.from(expected);
-    const b = Buffer.from(signature);
-    if (a.length !== b.length || !timingSafeEqual(a, b)) {
+    if (!timingSafeEqualUtf8(expected, signature)) {
       throw new ServiceUnavailableException('Invalid Razorpay signature');
     }
-    const payload = JSON.parse(rawBody.toString('utf8')) as {
-      event?: string;
-      payload?: {
-        payment?: {
-          entity?: {
-            id?: string;
-            status?: string;
-            notes?: { cafe_order_id?: string };
-          };
-        };
-      };
-    };
+    return parseRazorpayWebhookPayload(rawBody);
+  }
+
+  private checkoutBranding(input: {
+    receipt: string;
+    customer?: { name?: string; email?: string | null; mobile?: string };
+  }): Pick<
+    RazorpayCheckoutPayload,
+    'name' | 'description' | 'logo' | 'themeColor' | 'prefill'
+  > {
+    const name =
+      this.config.get<string>('RAZORPAY_CHECKOUT_NAME')?.trim() || 'Chote Bade Café';
+    const logo = this.config.get<string>('RAZORPAY_CHECKOUT_LOGO')?.trim() || undefined;
+    const themeColor =
+      this.config.get<string>('RAZORPAY_CHECKOUT_THEME_COLOR')?.trim() || undefined;
+    const customer = input.customer;
     return {
-      event: payload.event ?? '',
-      cafeOrderId: payload.payload?.payment?.entity?.notes?.cafe_order_id,
-      paymentId: payload.payload?.payment?.entity?.id,
-      status: payload.payload?.payment?.entity?.status,
+      name,
+      description: `Order ${input.receipt}`,
+      ...(logo ? { logo } : {}),
+      ...(themeColor ? { themeColor } : {}),
+      prefill: {
+        ...(customer?.name ? { name: customer.name } : {}),
+        ...(customer?.email ? { email: customer.email } : {}),
+        ...(customer?.mobile ? { contact: customer.mobile } : {}),
+      },
     };
   }
 
@@ -88,4 +131,11 @@ export class RazorpayPaymentGateway implements PaymentGateway {
     }
     return value;
   }
+}
+
+function timingSafeEqualUtf8(a: string, b: string): boolean {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return timingSafeEqual(bufA, bufB);
 }

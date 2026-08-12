@@ -4,6 +4,8 @@ import { Minus, Plus, Trash2, X } from "lucide-react"
 import type { OrderDetail, RazorpayCheckoutPayload } from "@cafe/shared-types"
 import { useCart } from "../context/CartContext"
 import { api, storeOrderAccess } from "../lib/api"
+import { openRazorpayCheckout } from "../lib/razorpayCheckout"
+import { getLenis } from "../hooks/useSmoothScroll"
 
 function formatPrice(price: number) {
   return `₹${price}`
@@ -42,8 +44,10 @@ export function CartDrawer() {
     if (!isOpen) {
       setStep("cart")
       setError(null)
+      getLenis()?.start()
       return
     }
+    getLenis()?.stop()
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") closeCart()
     }
@@ -52,6 +56,7 @@ export function CartDrawer() {
     return () => {
       document.body.style.overflow = ""
       window.removeEventListener("keydown", onKey)
+      getLenis()?.start()
     }
   }, [isOpen, closeCart])
 
@@ -90,12 +95,28 @@ export function CartDrawer() {
           undefined,
           checkedOut.id,
         )
-        const paid = await api.post<OrderDetail>(
-          `/payments/orders/${checkedOut.id}/mock-confirm`,
-          { razorpayOrderId: checkout.razorpayOrderId },
-          checkedOut.id,
-        )
-        setPlaced(paid)
+
+        // Local fake adapter — no real Checkout keys; keep smoke/dev path.
+        if (checkout.keyId === "mock") {
+          const paid = await api.post<OrderDetail>(
+            `/payments/orders/${checkedOut.id}/mock-confirm`,
+            { razorpayOrderId: checkout.razorpayOrderId },
+            checkedOut.id,
+          )
+          setPlaced(paid)
+        } else {
+          const result = await openRazorpayCheckout(checkout)
+          const paid = await api.post<OrderDetail>(
+            `/payments/orders/${checkedOut.id}/confirm`,
+            {
+              razorpayOrderId: result.razorpayOrderId,
+              razorpayPaymentId: result.razorpayPaymentId,
+              razorpaySignature: result.razorpaySignature,
+            },
+            checkedOut.id,
+          )
+          setPlaced(paid)
+        }
       } else {
         setPlaced(checkedOut)
       }
@@ -128,12 +149,16 @@ export function CartDrawer() {
         role="dialog"
         aria-modal="true"
         aria-label="Your table"
-        className={`absolute inset-y-0 right-0 flex w-full max-w-[420px] flex-col border-l border-white/35 bg-cream/80 shadow-[-24px_0_60px_rgba(50,38,27,0.18)] backdrop-blur-2xl transition-transform duration-[950ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
+        className={`absolute inset-y-0 right-0 flex w-full max-w-[420px] flex-col border-l border-ink/10 bg-[linear-gradient(180deg,#faf6ef_0%,#f3ebe0_45%,#efe6d8_100%)] shadow-[-24px_0_60px_rgba(50,38,27,0.22)] transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
-        <div className="flex items-center justify-between border-b border-ink/8 px-5 py-5 md:px-6">
-          <div>
+        <div className="relative flex items-center justify-between border-b border-ink/10 px-5 py-5 md:px-6">
+          <div
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(169,94,71,0.1),transparent_55%)]"
+            aria-hidden
+          />
+          <div className="relative">
             <p className="text-[0.68rem] font-semibold tracking-[0.16em] text-burgundy">
               YOUR TABLE{tableId ? ` · ${tableId}` : ""}
             </p>
@@ -148,7 +173,7 @@ export function CartDrawer() {
           <button
             type="button"
             onClick={closeCart}
-            className="grid size-11 place-items-center rounded-full glass-soft transition duration-500 hover:-translate-y-0.5"
+            className="relative grid size-10 place-items-center rounded-full border border-ink/10 bg-cream shadow-[0_8px_20px_rgba(50,38,27,0.08)] transition hover:-translate-y-0.5"
             aria-label="Close"
           >
             <X size={18} />
@@ -183,7 +208,7 @@ export function CartDrawer() {
               <p className="text-xs text-ink-muted break-words">{error}</p>
               <button
                 type="button"
-                className="btn-pill btn-ink w-full justify-center"
+                className="btn-pill btn-ink w-full justify-center !py-2.5 text-sm"
                 onClick={() => setStep("checkout")}
               >
                 Try again
@@ -245,17 +270,15 @@ export function CartDrawer() {
                 >
                   Pay at counter
                 </button>
-                {!import.meta.env.PROD && (
-                  <button
-                    type="button"
-                    onClick={() => setPayMethod("upi")}
-                    className={`rounded-2xl px-4 py-3.5 text-left text-sm font-semibold transition active:scale-[0.98] ${
-                      payMethod === "upi" ? "bg-burgundy text-cream" : "glass-soft text-ink"
-                    }`}
-                  >
-                    Pay online (UPI / card) — local mock
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setPayMethod("upi")}
+                  className={`rounded-2xl px-4 py-3.5 text-left text-sm font-semibold transition active:scale-[0.98] ${
+                    payMethod === "upi" ? "bg-burgundy text-cream" : "glass-soft text-ink"
+                  }`}
+                >
+                  Pay online (UPI / card)
+                </button>
               </div>
             </div>
           )}
@@ -268,14 +291,24 @@ export function CartDrawer() {
                   <p className="mt-2 max-w-[240px] text-sm text-ink-muted">
                     Add a coffee or chai from the menu — half the plate is meant to be shared.
                   </p>
-                  <button type="button" onClick={closeCart} className="btn-pill btn-ink mt-6">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      closeCart()
+                      navigate("/menu")
+                    }}
+                    className="btn-pill btn-ink mt-6 !py-2.5 text-sm"
+                  >
                     Browse menu
                   </button>
                 </div>
               ) : (
                 <ul className="space-y-3">
                   {items.map((item) => (
-                    <li key={item.id} className="rounded-2xl p-4 glass-panel">
+                    <li
+                      key={item.id}
+                      className="cart-line rounded-2xl border border-ink/10 bg-cream p-3.5 shadow-[0_12px_28px_rgba(50,38,27,0.06)]"
+                    >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
                           <p className="font-mono text-[0.75rem] font-semibold tracking-[0.07em] text-ink-deep">
@@ -294,22 +327,22 @@ export function CartDrawer() {
                         </p>
                       </div>
                       <div className="mt-4 flex items-center justify-between">
-                        <div className="inline-flex items-center gap-1 rounded-full glass-soft p-1">
+                        <div className="inline-flex items-center gap-1 rounded-full border border-ink/8 bg-cream p-0.5">
                           <button
                             type="button"
                             onClick={() => decrement(item.id)}
-                            className="grid size-10 place-items-center rounded-full"
+                            className="grid size-9 place-items-center rounded-full"
                             aria-label={`Decrease ${item.name}`}
                           >
                             <Minus size={14} />
                           </button>
-                          <span className="min-w-8 text-center text-sm font-semibold tabular-nums">
+                          <span className="min-w-7 text-center text-sm font-semibold tabular-nums">
                             {item.quantity}
                           </span>
                           <button
                             type="button"
                             onClick={() => increment(item.id)}
-                            className="grid size-10 place-items-center rounded-full"
+                            className="grid size-9 place-items-center rounded-full"
                             aria-label={`Increase ${item.name}`}
                           >
                             <Plus size={14} />
@@ -346,11 +379,11 @@ export function CartDrawer() {
         </div>
 
         {items.length > 0 && (step === "cart" || step === "checkout") && (
-          <div className="safe-bottom border-t border-ink/8 px-5 py-5 md:px-6">
-            <div className="mb-4 flex items-end justify-between">
+          <div className="safe-bottom border-t border-ink/10 bg-cream/95 px-5 py-4 shadow-[0_-16px_40px_rgba(50,38,27,0.08)] md:px-6">
+            <div className="mb-3 flex items-end justify-between">
               <div>
                 <p className="text-xs tracking-[0.12em] text-ink-muted">SUBTOTAL</p>
-                <p className="mt-1 font-display text-3xl text-ink-deep">{formatPrice(subtotal)}</p>
+                <p className="mt-0.5 font-display text-2xl text-ink-deep md:text-3xl">{formatPrice(subtotal)}</p>
               </div>
               {step === "cart" && (
                 <button
@@ -365,7 +398,7 @@ export function CartDrawer() {
             {step === "cart" ? (
               <button
                 type="button"
-                className="btn-pill btn-clay w-full justify-center py-3.5 text-base"
+                className="btn-pill btn-clay w-full justify-center !py-2.5 text-sm"
                 onClick={() => setStep("checkout")}
               >
                 Place order
@@ -375,7 +408,7 @@ export function CartDrawer() {
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    className="btn-pill btn-ink flex-1 justify-center py-3.5"
+                    className="btn-pill btn-ink flex-1 justify-center !py-2.5 text-sm"
                     onClick={() => setStep("cart")}
                     disabled={busy}
                   >
@@ -383,7 +416,7 @@ export function CartDrawer() {
                   </button>
                   <button
                     type="button"
-                    className={`btn-pill flex-[1.4] justify-center py-3.5 transition ${
+                    className={`btn-pill flex-[1.4] justify-center !py-2.5 text-sm transition ${
                       canConfirm && !busy
                         ? "btn-clay confirm-ready"
                         : "bg-ink/15 text-ink/40 cursor-not-allowed shadow-none"
@@ -392,7 +425,13 @@ export function CartDrawer() {
                     disabled={busy || !canConfirm}
                     aria-disabled={busy || !canConfirm}
                   >
-                    {busy ? "Placing…" : "Confirm"}
+                    {busy
+                      ? payMethod === "upi"
+                        ? "Opening pay…"
+                        : "Placing…"
+                      : payMethod === "upi"
+                        ? "Pay & place"
+                        : "Confirm"}
                   </button>
                 </div>
                 {!canConfirm && (

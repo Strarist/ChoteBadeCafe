@@ -140,17 +140,21 @@ model OrderItem {
 }
 
 model Payment {
-  id         String              @id @default(cuid())
-  orderId    String              @map("order_id")
-  method     PaymentMethod
-  amount     Int // paise
-  gatewayRef String?             @map("gateway_ref")
-  status     PaymentRecordStatus @default(pending)
+  id             String              @id @default(cuid())
+  orderId        String              @map("order_id")
+  method         PaymentMethod
+  amount         Int // paise
+  /** Razorpay payment id (or other gateway capture id) after success. */
+  gatewayRef     String?             @map("gateway_ref")
+  /** Razorpay order id while awaiting capture. */
+  gatewayOrderId String?             @map("gateway_order_id")
+  status         PaymentRecordStatus @default(pending)
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@unique([gatewayRef])
   @@index([orderId])
+  @@index([gatewayOrderId])
   @@map("payments")
 }
 

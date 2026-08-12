@@ -17,7 +17,7 @@ export const menuCatalog: Record<string, MenuCatalogEntry> = {
     displayName: "Baba's Espresso",
     description: "Short, strong, no small talk.",
     image: u("photo-1510591509098-f4fdc6d0ff04"),
-    imageAlt: "A dark espresso in a small cup",
+    imageAlt: "Espresso in a small cup next to cookies",
     tags: ["VEG", "HOT"],
   },
   americano: {
@@ -45,14 +45,14 @@ export const menuCatalog: Record<string, MenuCatalogEntry> = {
     displayName: "Chota Cortado",
     description: "Small cup, big comfort.",
     image: u("photo-1461023058943-07fcbe16d735"),
-    imageAlt: "Layered iced coffee in a glass",
+    imageAlt: "Iced coffee with swirling milk in a tall glass",
     tags: ["VEG", "HOT"],
   },
   "walnut staircase latte": {
     displayName: "Walnut Staircase Latte",
     description: "Toasted walnut, slow climb of warmth.",
     image: u("photo-1495474472287-4d71bcdd2085"),
-    imageAlt: "Hands holding a cup of latte art",
+    imageAlt: "Hand holding a white mug with leaf latte art",
     tags: ["VEG", "HOT"],
   },
   "cold sukoon brew": {

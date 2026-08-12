@@ -173,24 +173,77 @@
 
   .header-glass {
     isolation: isolate;
-    background: rgba(247, 241, 231, 0.78);
+    background: var(--color-cream);
     border-bottom: 1px solid rgba(50, 38, 27, 0.08);
-    box-shadow:
-      0 10px 36px rgba(50, 38, 27, 0.06),
-      inset 0 1px 0 rgba(255, 255, 255, 0.72);
-    backdrop-filter: blur(22px) saturate(1.4);
-    -webkit-backdrop-filter: blur(22px) saturate(1.4);
   }
 
   .header-glass-scrolled {
     isolation: isolate;
-    background: rgba(247, 241, 231, 0.9);
+    background: rgba(247, 241, 231, 0.98);
     border-bottom: 1px solid rgba(50, 38, 27, 0.1);
+    box-shadow: 0 8px 28px rgba(50, 38, 27, 0.06);
+  }
+
+  /* Premium solid chrome — replaces frosted glassmorphism navbar */
+  .site-header {
+    isolation: isolate;
+    background: rgba(247, 241, 231, 0.92);
+    border-bottom: 1px solid rgba(50, 38, 27, 0.07);
+  }
+
+  .site-header-scrolled {
+    background: rgba(247, 241, 231, 0.98);
+    border-bottom: 1px solid rgba(50, 38, 27, 0.1);
+    box-shadow: 0 10px 32px rgba(50, 38, 27, 0.07);
+  }
+
+  .site-mobile-nav {
+    background: #f7f1e7;
+    border-top: 1px solid rgba(50, 38, 27, 0.08);
+    box-shadow: 0 28px 64px rgba(50, 38, 27, 0.16);
+  }
+
+  .site-mobile-nav-wash {
+    background:
+      radial-gradient(ellipse at 10% 0%, rgba(169, 94, 71, 0.12), transparent 42%),
+      radial-gradient(ellipse at 90% 20%, rgba(201, 162, 75, 0.12), transparent 40%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.35), transparent 40%);
+  }
+
+  .menu-toolbar {
+    isolation: isolate;
+    background: rgba(247, 241, 231, 0.97);
+    border-bottom: 1px solid rgba(50, 38, 27, 0.08);
+    box-shadow: 0 10px 28px rgba(50, 38, 27, 0.05);
+  }
+
+  .cart-bar {
+    background: linear-gradient(180deg, #4a3a2c 0%, var(--color-ink-deep) 55%, #241910 100%);
+    color: var(--color-cream);
     box-shadow:
-      0 14px 40px rgba(50, 38, 27, 0.1),
-      inset 0 1px 0 rgba(255, 255, 255, 0.78);
-    backdrop-filter: blur(28px) saturate(1.45);
-    -webkit-backdrop-filter: blur(28px) saturate(1.45);
+      0 16px 42px rgba(50, 38, 27, 0.34),
+      0 2px 0 rgba(255, 255, 255, 0.08) inset,
+      0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+  }
+
+  .menu-photo {
+    border-radius: 1.25rem;
+    box-shadow: 0 12px 36px rgba(50, 38, 27, 0.08);
+  }
+
+  .cart-line {
+    background:
+      linear-gradient(165deg, rgba(255, 255, 255, 0.75), rgba(247, 241, 231, 0.9)),
+      var(--color-cream);
+  }
+
+  @media (max-width: 767px) {
+    .glass-soft,
+    .glass-panel,
+    .glass-chip {
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
   }
 
   .logo-wordmark {
@@ -659,9 +712,7 @@
   }
 
   .mobile-sheet-backdrop {
-    background: rgba(50, 38, 27, 0.28);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    background: rgba(50, 38, 27, 0.35);
   }
 
   .mobile-nav-link {
@@ -674,15 +725,16 @@
 
   .img-pop img {
     transition:
-      transform 0.85s var(--ease-premium),
-      filter 0.85s ease;
+      transform 0.7s var(--ease-premium),
+      filter 0.7s ease;
     transform: scale(1);
-    will-change: transform;
   }
 
-  .group:hover .img-pop img,
-  .img-pop:hover img {
-    transform: scale(1.06) translateY(-4px);
+  @media (hover: hover) and (pointer: fine) {
+    .group:hover .img-pop img,
+    .img-pop:hover img {
+      transform: scale(1.04);
+    }
   }
 
   .media-card {

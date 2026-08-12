@@ -42,7 +42,7 @@ export function HomePage() {
           onAnimationEnd={() => setCurtain(false)}
         />
       ) : null}
-      <section className="relative overflow-hidden pt-28 md:pt-32">
+      <section className="relative overflow-hidden pt-24 md:pt-32">
         <div
           className="pointer-events-none absolute -left-32 top-24 h-72 w-72 rounded-full bg-burgundy/10 blur-3xl"
           aria-hidden
@@ -52,49 +52,47 @@ export function HomePage() {
           aria-hidden
         />
 
-        <div className="relative mx-auto grid max-w-[1400px] items-center gap-12 px-5 pb-16 md:grid-cols-[1.05fr_0.95fr] md:gap-10 md:px-8 md:pb-24 lg:gap-16">
+        <div className="relative mx-auto grid max-w-[1400px] items-center gap-10 px-5 pb-14 md:grid-cols-[1.05fr_0.95fr] md:gap-10 md:px-8 md:pb-24 lg:gap-16">
           <PageIntro className="max-w-xl">
-            <Appear delay={80} as="p" className="text-[0.72rem] font-semibold tracking-[0.18em] text-burgundy">
-              EST. 2025 — A CAFE ABOUT THE BIGGEST BOND
+            <Appear delay={60} as="p" className="font-display text-2xl tracking-[-0.03em] text-burgundy md:text-[0.72rem] md:font-sans md:font-semibold md:tracking-[0.18em]">
+              <span className="md:hidden">Chote Bade</span>
+              <span className="hidden md:inline">EST. 2025 — A CAFE ABOUT THE BIGGEST BOND</span>
             </Appear>
-            <h1 className="mt-6 font-display text-[clamp(3.4rem,8vw,6.4rem)] leading-[0.95] tracking-[-0.04em] text-burgundy">
-              <EmergeLine delay={160}>Chota.</EmergeLine>
-              <EmergeLine delay={280}>Bada.</EmergeLine>
-              <EmergeLine delay={400}>Ek table.</EmergeLine>
+            <h1 className="mt-4 font-display text-[clamp(2.75rem,11vw,6.4rem)] leading-[0.95] tracking-[-0.04em] text-burgundy md:mt-6">
+              <EmergeLine delay={120}>Chota.</EmergeLine>
+              <EmergeLine delay={200}>Bada.</EmergeLine>
+              <EmergeLine delay={280}>Ek table.</EmergeLine>
             </h1>
-            <Appear delay={560} as="p" className="mt-7 max-w-md text-[1.05rem] leading-relaxed text-ink-muted">
+            <Appear delay={400} as="p" className="mt-5 max-w-md text-[1rem] leading-relaxed text-ink-muted md:mt-7 md:text-[1.05rem]">
               The oldest bond there is — the big one and the small one, meeting over one warm plate.
             </Appear>
-            <Appear delay={700} className="mt-9 flex flex-wrap items-center gap-5">
-              <button type="button" onClick={orderNow} className="btn-pill btn-clay">
+            <Appear delay={500} className="mt-7 flex flex-wrap items-center gap-4 md:mt-9 md:gap-5">
+              <button type="button" onClick={orderNow} className="btn-pill btn-clay !py-2.5 text-sm">
                 See the menu
               </button>
-              <Link to="/story" className="link-arrow text-burgundy">
+              <Link to="/story" className="link-arrow text-sm text-burgundy md:text-base">
                 Read our story →
               </Link>
             </Appear>
           </PageIntro>
 
-            <Appear delay={280} className="relative mx-auto w-full max-w-[400px] lg:max-w-[440px]">
+            <Appear delay={200} className="relative mx-auto w-full max-w-[400px] lg:max-w-[440px]">
             <div
               ref={tiltRef}
-              className="arch-frame media-card relative aspect-[3/4.35] bg-[#ded9ce] shadow-[0_28px_70px_rgba(50,38,27,0.16)] will-change-transform"
+              className="arch-frame media-card relative aspect-[3/4.1] bg-[#ded9ce] shadow-[0_28px_70px_rgba(50,38,27,0.16)] will-change-transform md:aspect-[3/4.35]"
             >
               <div className="img-pop hero-photo absolute inset-0">
                 <img
                   src={images.heroInterior}
                   alt="Warm arched interior of Chote Bade Café"
                   className="h-full w-full object-cover"
+                  fetchPriority="high"
+                  decoding="async"
                 />
               </div>
-              <span className="steam left-[42%] bottom-[58%]" style={{ animationDelay: "0s" }} />
-              <span className="steam left-[48%] bottom-[56%]" style={{ animationDelay: "1.1s" }} />
-              <span className="steam left-[54%] bottom-[59%]" style={{ animationDelay: "2.1s" }} />
-              <div className="absolute inset-x-4 bottom-4 z-10 rounded-xl px-3 py-2.5 text-center glass-chip md:inset-x-6 md:bottom-5">
-                <p className="text-[0.65rem] font-semibold tracking-[0.14em] text-burgundy md:text-[0.68rem]">
-                  CHOTA SA BREAK, BADA SA SUKOON
-                </p>
-              </div>
+              <span className="steam left-[42%] bottom-[58%] hidden sm:block" style={{ animationDelay: "0s" }} />
+              <span className="steam left-[48%] bottom-[56%] hidden sm:block" style={{ animationDelay: "1.1s" }} />
+              <span className="steam left-[54%] bottom-[59%] hidden sm:block" style={{ animationDelay: "2.1s" }} />
             </div>
             <div
               className="pointer-events-none absolute -bottom-6 -left-6 size-24 rounded-full border border-burgundy/20 md:-bottom-8 md:-left-8 md:size-28"

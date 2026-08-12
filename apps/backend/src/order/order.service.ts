@@ -250,6 +250,23 @@ export class OrderService {
     return this.transition(orderId, 'confirmed', staffUserId ? 'staff' : 'system', staffUserId);
   }
 
+  /** Persist Razorpay order id on the pending payment row (idempotent). */
+  async attachGatewayOrderId(orderId: string, gatewayOrderId: string): Promise<void> {
+    const order = await this.findById(orderId);
+    const pending = order.payments.find((p) => p.status === 'pending');
+    if (!pending) {
+      throw new BadRequestException('No pending payment to attach gateway order id');
+    }
+    if (pending.gatewayOrderId && pending.gatewayOrderId !== gatewayOrderId) {
+      throw new BadRequestException('Payment already linked to a different Razorpay order');
+    }
+    if (pending.gatewayOrderId === gatewayOrderId) return;
+    await this.prisma.payment.update({
+      where: { id: pending.id },
+      data: { gatewayOrderId },
+    });
+  }
+
   async markPaymentFailed(orderId: string): Promise<OrderDetail> {
     await this.prisma.order.update({
       where: { id: orderId },
@@ -518,6 +535,7 @@ export class OrderService {
         method: p.method,
         amount: p.amount,
         gatewayRef: p.gatewayRef,
+        gatewayOrderId: p.gatewayOrderId ?? null,
         status: p.status,
       })),
       statusLogs: order.statusLogs.map((l) => ({

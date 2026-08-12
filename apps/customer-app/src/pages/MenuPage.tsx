@@ -77,6 +77,7 @@ function QtyControls({
   onDecrement,
   onIncrement,
   onAdd,
+  compact = false,
 }: {
   itemName: string
   qty: number
@@ -84,6 +85,7 @@ function QtyControls({
   onDecrement: () => void
   onIncrement: () => void
   onAdd: () => void
+  compact?: boolean
 }) {
   if (qty > 0) {
     return (
@@ -95,7 +97,7 @@ function QtyControls({
         <button
           type="button"
           onClick={onDecrement}
-          className="grid size-10 place-items-center rounded-full text-burgundy transition active:scale-90 hover:bg-cream/50 md:size-11"
+          className="grid size-10 place-items-center rounded-full text-burgundy transition active:scale-90 hover:bg-cream/50"
           aria-label={`Decrease ${itemName}`}
         >
           <Minus size={15} strokeWidth={2.2} />
@@ -106,7 +108,7 @@ function QtyControls({
         <button
           type="button"
           onClick={onIncrement}
-          className="grid size-10 place-items-center rounded-full text-burgundy transition active:scale-90 hover:bg-cream/50 md:size-11"
+          className="grid size-10 place-items-center rounded-full text-burgundy transition active:scale-90 hover:bg-cream/50"
           aria-label={`Increase ${itemName}`}
         >
           <Plus size={15} strokeWidth={2.2} />
@@ -119,7 +121,11 @@ function QtyControls({
     <button
       type="button"
       onClick={onAdd}
-      className="text-[0.82rem] font-semibold tracking-wide text-ink-deep transition hover:text-clay"
+      className={
+        compact
+          ? "font-mono text-[0.68rem] font-semibold tracking-[0.06em] text-burgundy transition hover:text-clay"
+          : "text-[0.82rem] font-semibold tracking-wide text-ink-deep transition hover:text-clay"
+      }
     >
       Add +
     </button>
@@ -143,7 +149,7 @@ function WholeMenuSection({
 }) {
   return (
     <div>
-      <h2 className="font-display text-[2rem] italic tracking-[-0.02em] text-burgundy md:text-[2.35rem]">
+      <h2 className="font-display text-[1.85rem] italic tracking-[-0.02em] text-burgundy md:text-[2.2rem]">
         {section.title}
       </h2>
       <ul className="mt-5 space-y-5">
@@ -151,40 +157,30 @@ function WholeMenuSection({
           const qty = qtyFor(item.id)
           const added = justAdded === item.id
           return (
-            <li key={item.id} className="flex gap-3">
-              <div className="img-pop size-16 shrink-0 overflow-hidden sm:size-[4.5rem]">
-                <img
-                  src={item.image}
-                  alt={item.imageAlt}
-                  className="h-full w-full object-cover"
-                  loading="lazy"
-                />
+            <li key={item.id}>
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="min-w-0 font-mono text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-ink-deep sm:text-[0.78rem]">
+                  {item.name}
+                </p>
+                <span className="shrink-0 font-mono text-[0.72rem] text-ink-deep sm:text-[0.78rem]">
+                  {formatPrice(item.price, item.isAddon)}
+                </span>
               </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-baseline justify-between gap-3">
-                  <p className="font-mono text-[0.72rem] font-semibold tracking-[0.08em] text-burgundy sm:text-[0.78rem]">
-                    {item.name}
-                  </p>
-                  <span className="shrink-0 font-mono text-[0.72rem] text-burgundy sm:text-[0.78rem]">
-                    {formatPrice(item.price, item.isAddon)}
-                  </span>
-                </div>
-                <p className="mt-1 font-mono text-[0.68rem] leading-relaxed text-ink-muted sm:text-[0.72rem]">
+              {item.note ? (
+                <p className="mt-1 max-w-[22rem] font-mono text-[0.68rem] leading-relaxed text-ink-muted sm:text-[0.72rem]">
                   {item.note}
                 </p>
-                <div className="mt-2 flex items-center justify-between">
-                  <p className="text-[0.62rem] font-semibold tracking-[0.12em] text-ink-muted">
-                    {item.tags.join(" · ")}
-                  </p>
-                  <QtyControls
-                    itemName={item.displayName}
-                    qty={qty}
-                    added={added}
-                    onDecrement={() => onDecrement(item.id)}
-                    onIncrement={() => onIncrement(item.id)}
-                    onAdd={() => onAdd(section.id, section.title, item)}
-                  />
-                </div>
+              ) : null}
+              <div className="mt-2 flex justify-end">
+                <QtyControls
+                  itemName={item.displayName}
+                  qty={qty}
+                  added={added}
+                  compact
+                  onDecrement={() => onDecrement(item.id)}
+                  onIncrement={() => onIncrement(item.id)}
+                  onAdd={() => onAdd(section.id, section.title, item)}
+                />
               </div>
             </li>
           )
@@ -214,16 +210,31 @@ function WholeMenu({
   const colB = sections.slice(mid)
 
   return (
-    <div className="grid grid-cols-1 gap-10 lg:grid-cols-3 lg:gap-12">
-      <Reveal>
-        <div className="img-pop aspect-[4/5] overflow-hidden sm:aspect-[5/4] lg:aspect-[3/4]">
-          <img
-            src={images.coffeeCup}
-            alt="Milk being poured into a cup of coffee"
-            className="h-full w-full object-cover"
-          />
-        </div>
-      </Reveal>
+    <div className="grid grid-cols-1 gap-10 lg:grid-cols-3 lg:gap-12 lg:items-start">
+      <div className="space-y-6">
+        <PageIntro>
+          <h1 className="font-display text-[clamp(2.4rem,9vw,3.8rem)] italic leading-[1.05] tracking-[-0.03em] text-burgundy">
+            <EmergeLine delay={80}>Explore Our Menu</EmergeLine>
+          </h1>
+          <Appear
+            delay={260}
+            as="p"
+            className="mt-4 max-w-sm font-mono text-[0.78rem] leading-relaxed text-ink-muted sm:text-[0.84rem]"
+          >
+            Thoughtfully crafted coffee, slow-steeped chai, and seasonal drinks made with
+            intentional ingredients that love you right back.
+          </Appear>
+        </PageIntro>
+        <Reveal delay={120}>
+          <div className="menu-photo img-pop aspect-[4/5] overflow-hidden sm:aspect-[5/4] lg:aspect-[3/4]">
+            <img
+              src={images.coffeeCup}
+              alt="Milk being poured into a cup of coffee"
+              className="h-full w-full object-cover"
+            />
+          </div>
+        </Reveal>
+      </div>
 
       <div className="space-y-10">
         {colA.map((section, index) => (
@@ -266,7 +277,7 @@ export function MenuPage() {
   const [justAdded, setJustAdded] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const { addItem, increment, decrement, openCart, itemCount, items } = useCart()
+  const { addItem, increment, decrement, items } = useCart()
 
   useEffect(() => {
     let cancelled = false
@@ -340,84 +351,80 @@ export function MenuPage() {
     <div className="paper-bg relative min-h-screen">
       <div className="pointer-events-none absolute inset-0 opacity-[0.35] grain" aria-hidden />
 
-      <section className="relative overflow-hidden px-4 pt-24 pb-6 sm:px-5 md:px-8 md:pt-32 md:pb-8">
+      {/* Title lives above sticky filters so it never slides underneath them */}
+      <section className="relative px-4 pb-2 pt-24 sm:px-5 md:px-8 md:pt-28">
         <div className="relative mx-auto max-w-[1180px]">
           {view === "photos" ? (
-            <PageIntro>
-              <Appear delay={60} as="p" className="text-[0.72rem] font-semibold tracking-[0.18em] text-burgundy">
+            <PageIntro className="mb-5 md:mb-6">
+              <Appear delay={40} as="p" className="text-[0.72rem] font-semibold tracking-[0.18em] text-burgundy">
                 MENU & ORDER
               </Appear>
-              <h1 className="mt-3 font-display text-[clamp(2.1rem,8vw,4.2rem)] leading-[1.05] tracking-[-0.035em] text-burgundy">
-                <EmergeLine delay={140}>What are you</EmergeLine>
-                <EmergeLine delay={260}>in the mood for?</EmergeLine>
+              <h1 className="mt-3 font-display text-[clamp(2rem,7vw,3.4rem)] leading-[1.08] tracking-[-0.035em] text-burgundy">
+                <EmergeLine delay={120}>What are you</EmergeLine>
+                <EmergeLine delay={220}>in the mood for?</EmergeLine>
               </h1>
             </PageIntro>
           ) : (
-            <PageIntro>
-              <h1 className="font-display text-[clamp(2.4rem,9vw,4.6rem)] italic leading-[1.05] tracking-[-0.03em] text-burgundy">
-                <EmergeLine delay={80}>Explore Our Menu</EmergeLine>
-              </h1>
-              <Appear
-                delay={280}
-                as="p"
-                className="mt-4 max-w-md font-mono text-[0.78rem] leading-relaxed text-ink-muted sm:text-[0.84rem]"
-              >
-                Thoughtfully crafted coffee, slow-steeped chai, and seasonal drinks made with
-                intentional ingredients that love you right back.
+            <PageIntro className="mb-5 md:mb-6">
+              <Appear delay={40} as="p" className="text-[0.72rem] font-semibold tracking-[0.18em] text-burgundy">
+                WHOLE MENU
               </Appear>
+              <h1 className="mt-3 font-display text-[clamp(2rem,7vw,3.2rem)] leading-[1.08] tracking-[-0.035em] text-burgundy">
+                Everything on paper
+              </h1>
             </PageIntro>
           )}
-
-          <Reveal delay={160}>
-            <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:items-center sm:justify-between">
-              <div
-                id="menu-filters"
-                className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-              >
-                {filters.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => setFilter(item.id)}
-                    className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold chip-3d ${
-                      filter === item.id ? "chip-3d-active" : ""
-                    }`}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-
-              <div className="inline-flex self-start rounded-full glass-soft p-1">
-                <button
-                  type="button"
-                  onClick={() => setView("photos")}
-                  className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition ${
-                    view === "photos" ? "bg-ink-deep text-cream" : "text-burgundy"
-                  }`}
-                  aria-pressed={view === "photos"}
-                >
-                  <LayoutGrid size={14} />
-                  Photos
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setView("whole")}
-                  className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition ${
-                    view === "whole" ? "bg-ink-deep text-cream" : "text-burgundy"
-                  }`}
-                  aria-pressed={view === "whole"}
-                >
-                  <List size={14} />
-                  Whole menu
-                </button>
-              </div>
-            </div>
-          </Reveal>
         </div>
       </section>
 
-      <section className="relative px-4 pb-28 sm:px-5 md:px-8 md:pb-32">
+      <div className="menu-toolbar sticky top-16 z-30 md:top-[4.25rem]">
+        <div className="mx-auto flex max-w-[1180px] flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5 md:px-8">
+          <div
+            id="menu-filters"
+            className="flex gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
+            {filters.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setFilter(item.id)}
+                className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold chip-3d ${
+                  filter === item.id ? "chip-3d-active" : ""
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="inline-flex self-start rounded-full border border-ink/10 bg-cream p-1 sm:self-auto">
+            <button
+              type="button"
+              onClick={() => setView("photos")}
+              className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition ${
+                view === "photos" ? "bg-ink-deep text-cream" : "text-burgundy"
+              }`}
+              aria-pressed={view === "photos"}
+            >
+              <LayoutGrid size={14} />
+              Photos
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("whole")}
+              className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition ${
+                view === "whole" ? "bg-ink-deep text-cream" : "text-burgundy"
+              }`}
+              aria-pressed={view === "whole"}
+            >
+              <List size={14} />
+              Whole menu
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <section className="relative px-4 pb-28 pt-6 sm:px-5 md:px-8 md:pb-32 md:pt-8">
         <div className="relative mx-auto max-w-[1180px]">
           {loading && <p className="text-sm text-ink-muted">Loading the menu…</p>}
           {error && (
@@ -440,12 +447,13 @@ export function MenuPage() {
                   return (
                     <Reveal key={item.id} delay={Math.min(index * 50, 240)}>
                       <article className="group">
-                        <div className="img-pop aspect-square overflow-hidden bg-wash">
+                        <div className="menu-photo img-pop aspect-square overflow-hidden bg-wash">
                           <img
                             src={item.image}
                             alt={item.imageAlt}
                             className="h-full w-full object-cover"
-                            loading={index < 3 ? "eager" : "lazy"}
+                            loading={index < 2 ? "eager" : "lazy"}
+                            decoding="async"
                           />
                         </div>
                         <div className="mt-4 flex items-baseline justify-between gap-3">
@@ -488,21 +496,6 @@ export function MenuPage() {
           </div>
         </div>
       </section>
-
-      <button
-        type="button"
-        onClick={openCart}
-        className="btn-pill btn-ink fixed bottom-6 left-4 z-40 mb-[env(safe-area-inset-bottom)] px-5 py-3.5 text-sm sm:left-5 md:left-8"
-      >
-        View your table
-        <span
-          className={`grid min-w-5 place-items-center rounded-full bg-clay px-1.5 text-[0.7rem] leading-5 transition-all duration-700 ${
-            itemCount > 0 ? "scale-100 opacity-100" : "scale-75 opacity-40"
-          }`}
-        >
-          {itemCount}
-        </span>
-      </button>
     </div>
   )
 }

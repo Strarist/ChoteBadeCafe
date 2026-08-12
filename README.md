@@ -27,7 +27,18 @@ Real env files are gitignored. Only these templates belong in git:
 
 Before the first push: `pnpm check:secrets`. GitHub also runs this on every push/PR.
 
+## Docs for humans
+
+| Doc | What it is |
+|---|---|
+| [DEPLOY.md](./DEPLOY.md) | VPS / Docker deploy |
+| [DEPLOY-CLOUD.md](./DEPLOY-CLOUD.md) | Render free-tier cloud |
+| [docs/SITE_HARDENING_REPORT.md](./docs/SITE_HARDENING_REPORT.md) | Mobile UX + menu seed + hardening (readable) |
+| [docs/LOGO_PWA_ICON_PLAN.md](./docs/LOGO_PWA_ICON_PLAN.md) | Logo / PWA icon system plan |
+| [AUDIT.md](./AUDIT.md) | Security / platform backlog |
+
 ## Local setup
+
 
 1. Copy env: `cp .env.example .env`
 2. Start Postgres + Redis: `docker compose up -d`
@@ -54,7 +65,7 @@ pnpm --filter @cafe/counter-pos dev
 | Integration | Fake (dev default) | Live prep |
 |---|---|---|
 | PetPooja | `PETPOOJA_ADAPTER=fake` | Set credentials + `PETPOOJA_ADAPTER=live` + `PETPOOJA_WEBHOOK_SECRET`; HTTP push still fails until partner docs wired |
-| Razorpay | `PAYMENT_ADAPTER=fake` | Set `RAZORPAY_*` + `PAYMENT_ADAPTER=live` |
+| Razorpay | `PAYMENT_ADAPTER=fake` | Set `RAZORPAY_KEY_ID` / `KEY_SECRET` / `WEBHOOK_SECRET` + `PAYMENT_ADAPTER=live`; configure webhook events (`payment.captured`, `payment.failed`, `order.paid`); see [DEPLOY.md](./DEPLOY.md) |
 | WhatsApp/SMS | `NOTIFICATION_ADAPTER=fake` | Set BSP + SMS keys + `NOTIFICATION_ADAPTER=live` (impl pending provider choice) |
 
 Readiness: `GET /health/integrations`

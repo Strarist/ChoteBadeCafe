@@ -1,47 +1,60 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
-import type { RazorpayCheckoutPayload } from '@cafe/shared-types';
-import type { PaymentGateway } from './payment-gateway.interface';
+import { ConfigService } from '@nestjs/config';
+import { createHmac, timingSafeEqual } from 'node:crypto';
+import type { RazorpayCheckoutPayload, RazorpayConfirmInput } from '@cafe/shared-types';
+import type { ParsedPaymentWebhook, PaymentGateway } from './payment-gateway.interface';
+import { parseRazorpayWebhookPayload } from './razorpay-webhook.parser';
 
 /** Local/dev gateway — no network. Swap out when Razorpay keys are live. */
 @Injectable()
 export class FakePaymentGateway implements PaymentGateway {
   readonly mode = 'fake' as const;
 
+  constructor(private readonly config: ConfigService) {}
+
   async createCheckout(input: {
     orderId: string;
     amountPaise: number;
     receipt: string;
+    customer?: { name?: string; email?: string | null; mobile?: string };
   }): Promise<RazorpayCheckoutPayload> {
+    const name =
+      this.config.get<string>('RAZORPAY_CHECKOUT_NAME')?.trim() || 'Chote Bade Café';
+    const customer = input.customer;
     return {
       orderId: input.orderId,
       razorpayOrderId: `order_mock_${input.orderId.slice(-8)}_${Date.now()}`,
       amount: input.amountPaise,
       currency: 'INR',
       keyId: 'mock',
+      name,
+      description: `Order ${input.receipt}`,
+      prefill: {
+        ...(customer?.name ? { name: customer.name } : {}),
+        ...(customer?.email ? { email: customer.email } : {}),
+        ...(customer?.mobile ? { contact: customer.mobile } : {}),
+      },
     };
   }
 
-  async verifyAndParseWebhook(rawBody: Buffer, _signature: string | undefined) {
+  /** Accepts HMAC with secret `mock`, matching Checkout confirm shape for local tests. */
+  verifyCheckoutSignature(input: RazorpayConfirmInput): boolean {
+    const expected = createHmac('sha256', 'mock')
+      .update(`${input.razorpayOrderId}|${input.razorpayPaymentId}`)
+      .digest('hex');
+    const a = Buffer.from(expected);
+    const b = Buffer.from(input.razorpaySignature);
+    if (a.length !== b.length) return false;
+    return timingSafeEqual(a, b);
+  }
+
+  async verifyAndParseWebhook(
+    rawBody: Buffer,
+    _signature: string | undefined,
+  ): Promise<ParsedPaymentWebhook> {
     if (process.env.NODE_ENV === 'production') {
       throw new ForbiddenException('Unsigned fake payment webhooks are disabled in production');
     }
-    const payload = JSON.parse(rawBody.toString('utf8')) as {
-      event?: string;
-      payload?: {
-        payment?: {
-          entity?: {
-            id?: string;
-            status?: string;
-            notes?: { cafe_order_id?: string };
-          };
-        };
-      };
-    };
-    return {
-      event: payload.event ?? '',
-      cafeOrderId: payload.payload?.payment?.entity?.notes?.cafe_order_id,
-      paymentId: payload.payload?.payment?.entity?.id,
-      status: payload.payload?.payment?.entity?.status,
-    };
+    return parseRazorpayWebhookPayload(rawBody);
   }
 }

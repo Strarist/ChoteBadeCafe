@@ -123,7 +123,7 @@ async function main() {
   });
   console.log({ status: collected.status, logs: collected.statusLogs.map((l) => l.status) });
 
-  console.log('10) online payment mock path');
+  console.log('10) online payment confirm signature path (fake HMAC)');
   const online = await req('/orders', {
     method: 'POST',
     body: JSON.stringify({
@@ -142,10 +142,18 @@ async function main() {
     method: 'POST',
     headers: onlineAccess,
   });
-  const paid = await req(`/payments/orders/${online.id}/mock-confirm`, {
+  const paymentId = `pay_mock_${Date.now()}`;
+  const razorpaySignature = createHmac('sha256', 'mock')
+    .update(`${checkout.razorpayOrderId}|${paymentId}`)
+    .digest('hex');
+  const paid = await req(`/payments/orders/${online.id}/confirm`, {
     method: 'POST',
     headers: onlineAccess,
-    body: JSON.stringify({ razorpayOrderId: checkout.razorpayOrderId }),
+    body: JSON.stringify({
+      razorpayOrderId: checkout.razorpayOrderId,
+      razorpayPaymentId: paymentId,
+      razorpaySignature,
+    }),
   });
   console.log({ onlineStatus: paid.status, paymentStatus: paid.paymentStatus });
 

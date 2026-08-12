@@ -107,6 +107,8 @@ export interface Payment {
   /** Amount in paise (integer). */
   amount: number;
   gatewayRef: string | null;
+  /** Razorpay order id while awaiting capture. */
+  gatewayOrderId: string | null;
   status: PaymentRecordStatus;
 }
 
@@ -174,4 +176,20 @@ export interface RazorpayCheckoutPayload {
   amount: number;
   currency: 'INR';
   keyId: string;
+  /** Business name shown on Checkout.js */
+  name: string;
+  description?: string;
+  logo?: string;
+  themeColor?: string;
+  prefill?: {
+    name?: string;
+    email?: string;
+    contact?: string;
+  };
+}
+
+export interface RazorpayConfirmInput {
+  razorpayOrderId: string;
+  razorpayPaymentId: string;
+  razorpaySignature: string;
 }
