@@ -187,12 +187,32 @@ export const journalPosts = [
 export const site = {
   name: "Chote Bade",
   fullName: "Chote Bade Café",
-  tagline: "A little cafe built around the biggest bond there is.",
-  address: "14, Green Wall Lane, Bandra West, Mumbai",
-  addressFull: "14, Green Wall Lane, Bandra West, Mumbai 400050",
-  hours: "Daily · 8:00 am – 11:00 pm",
-  phone: "+91 98200 00000",
-  email: "hello@chotebadecafe.in",
+  tagline: "Chote Moments, Bade Memories.",
+  mantra: "Walk in. Relax. Enjoy. Good food | Good mood | Great memories.",
+  address: "Shop No. D-49, Rodeo Drive, Near Park Hospital, Sector 49, Gurugram",
+  addressFull:
+    "Unit No. 49, Block D, Ground Floor, Rodeo Drive Arcadia II, South City-2, Near Park Hospital, Sector 49, Gurugram, Haryana 122018",
+  hoursByDay: [
+    { days: "Mon – Thu", time: "8:00 am – 11:00 pm" },
+    { days: "Fri – Sat", time: "8:00 am – 12:30 am" },
+    { days: "Sunday", time: "9:00 am – 11:00 pm" },
+  ],
+  hours: "Mon–Thu 8am–11pm · Fri–Sat 8am–12:30am · Sun 9am–11pm",
+  phone: "+91 98765 43210",
+  email: "hello@chotebadecafe.com",
+  website: "https://chotebadecafe.com",
   instagram: "@chotebadecafe",
-  instagramUrl: "https://instagram.com",
+  instagramUrl: "https://www.instagram.com/chotebadecafe/",
+  mapsUrl:
+    "https://www.google.com/maps/search/?api=1&query=Unit+No.+49+Block+D+Rodeo+Drive+Arcadia+II+South+City-2+Gurugram+122018",
+  cuisines: "Continental, Italian & Mexican",
+  deliveryPartners: "Zomato and Swiggy",
 } as const
+
+export const legalLinks = [
+  { to: "/terms", label: "Terms & Conditions" },
+  { to: "/privacy", label: "Privacy Policy" },
+  { to: "/refunds", label: "Cancellation & Refunds" },
+  { to: "/shipping", label: "Shipping Policy" },
+  { to: "/contact", label: "Contact Us" },
+] as const

@@ -5,6 +5,7 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { cafeApiProxy } from '../../packages/vite-api-proxy.ts';
+import { legalPagesPlugin } from './legal-pages';
 
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
@@ -14,9 +15,20 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    legalPagesPlugin(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'],
+      workbox: {
+        navigateFallback: 'index.html',
+        navigateFallbackDenylist: [
+          /^\/privacy(?:\.html)?\/?$/,
+          /^\/terms(?:\.html)?\/?$/,
+          /^\/refunds(?:\.html)?\/?$/,
+          /^\/shipping(?:\.html)?\/?$/,
+          /^\/contact(?:\.html)?\/?$/,
+        ],
+      },
       manifest: {
         name: 'Chote Bade Café',
         short_name: 'Chote Bade',

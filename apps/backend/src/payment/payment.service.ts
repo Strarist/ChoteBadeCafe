@@ -24,7 +24,17 @@ export class PaymentService {
     this.logger.log(`Payment gateway mode: ${gateway.mode}`);
   }
 
+  onlinePayEnabled(): boolean {
+    return this.gateway.mode === 'live' || process.env.ALLOW_FAKE_PAYMENTS === '1';
+  }
+
   async createCheckout(orderId: string): Promise<RazorpayCheckoutPayload> {
+    if (!this.onlinePayEnabled()) {
+      throw new BadRequestException(
+        'Online payment is not available yet. Please pay at the counter.',
+      );
+    }
+
     const order = await this.orders.findById(orderId);
     if (order.status !== 'awaiting_payment') {
       throw new BadRequestException('Order is not awaiting payment');
@@ -55,6 +65,11 @@ export class PaymentService {
 
   /** Checkout.js success handler — verifies payment signature then marks paid. */
   async confirmPayment(orderId: string, input: RazorpayConfirmInput): Promise<OrderDetail> {
+    if (!this.onlinePayEnabled()) {
+      throw new BadRequestException(
+        'Online payment is not available yet. Please pay at the counter.',
+      );
+    }
     if (!input.razorpayOrderId || !input.razorpayPaymentId || !input.razorpaySignature) {
       throw new BadRequestException('Missing Razorpay payment confirmation fields');
     }
@@ -95,7 +110,7 @@ export class PaymentService {
     }
     if (process.env.ALLOW_FAKE_PAYMENTS !== '1') {
       throw new BadRequestException(
-        'Mock confirm disabled — set ALLOW_FAKE_PAYMENTS=1 for local fake checkout',
+        'Online payment is not available yet. Please pay at the counter.',
       );
     }
     await this.orders.attachGatewayOrderId(orderId, razorpayOrderId);

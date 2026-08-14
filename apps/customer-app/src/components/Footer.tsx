@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom"
-import { Clock3, MapPin, Phone } from "lucide-react"
+import { Clock3, Mail, MapPin, Phone } from "lucide-react"
 import { Logo } from "./Logo"
-import { site } from "../data/site"
+import { legalLinks, site } from "../data/site"
 
 function InstagramIcon({ size = 16 }: { size?: number }) {
   return (
@@ -34,7 +34,14 @@ export function Footer() {
           <ul className="mt-5 space-y-4 text-sm text-cream/80">
             <li className="flex gap-3">
               <MapPin size={16} className="mt-0.5 shrink-0 opacity-70" />
-              <span>{site.address}</span>
+              <a
+                href={site.mapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="transition hover:text-cream"
+              >
+                {site.address}
+              </a>
             </li>
             <li className="flex gap-3">
               <Clock3 size={16} className="mt-0.5 shrink-0 opacity-70" />
@@ -44,6 +51,12 @@ export function Footer() {
               <Phone size={16} className="mt-0.5 shrink-0 opacity-70" />
               <a href={`tel:${site.phone.replace(/\s/g, "")}`} className="transition hover:text-cream">
                 {site.phone}
+              </a>
+            </li>
+            <li className="flex gap-3">
+              <Mail size={16} className="mt-0.5 shrink-0 opacity-70" />
+              <a href={`mailto:${site.email}`} className="transition hover:text-cream">
+                {site.email}
               </a>
             </li>
           </ul>
@@ -58,18 +71,18 @@ export function Footer() {
               </Link>
             </li>
             <li>
+              <Link to="/menu" className="transition hover:text-cream">
+                Menu
+              </Link>
+            </li>
+            <li>
               <Link to="/journal" className="transition hover:text-cream">
                 Journal
               </Link>
             </li>
             <li>
-              <Link to="/memory-wall" className="transition hover:text-cream">
-                The Memory Wall
-              </Link>
-            </li>
-            <li>
               <Link to="/visit" className="transition hover:text-cream">
-                Visit
+                Contact Us
               </Link>
             </li>
           </ul>
@@ -80,18 +93,28 @@ export function Footer() {
           <a
             href={site.instagramUrl}
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             className="mt-5 inline-flex items-center gap-2 text-sm text-cream/80 transition hover:text-cream"
           >
             <InstagramIcon />
             {site.instagram}
           </a>
+          <p className="mt-4 text-xs leading-relaxed text-cream/55">
+            {site.cuisines}. We deliver on Zomato &amp; Swiggy.
+          </p>
         </div>
       </div>
 
       <div className="relative border-t border-cream/10">
-        <div className="mx-auto flex max-w-[1400px] flex-col gap-2 px-5 py-5 text-xs text-cream/45 md:flex-row md:items-center md:justify-between md:px-8">
-          <p>© 2026 {site.fullName}. Made with chai-level patience.</p>
+        <div className="mx-auto flex max-w-[1400px] flex-col gap-3 px-5 py-5 text-xs text-cream/45 md:flex-row md:items-center md:justify-between md:px-8">
+          <p>© 2026 {site.fullName}. {site.tagline}</p>
+          <nav aria-label="Legal" className="flex flex-wrap gap-x-4 gap-y-2">
+            {legalLinks.map((link) => (
+              <Link key={link.to} to={link.to} className="transition hover:text-cream">
+                {link.label}
+              </Link>
+            ))}
+          </nav>
         </div>
       </div>
     </footer>

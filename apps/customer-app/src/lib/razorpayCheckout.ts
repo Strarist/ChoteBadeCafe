@@ -117,6 +117,8 @@ export async function openRazorpayCheckout(
       throw new Error('Razorpay Key ID missing from checkout payload / VITE_RAZORPAY_KEY_ID')
     }
 
+    const testMethods = key.startsWith('rzp_test_')
+
     return new Promise((resolve, reject) => {
       let settled = false
       const rzp = new RazorpayCtor({
@@ -127,35 +129,35 @@ export async function openRazorpayCheckout(
         description: payload.description,
         image: payload.logo,
         order_id: payload.razorpayOrderId,
-        // Browser-friendly test path:
-        // - Netbanking → mock bank page → Success (no phone / no intl cards)
-        // - UPI collect → type success@razorpay (not QR scan)
-        prefill: {
-          ...payload.prefill,
-          method: 'netbanking',
-        },
-        config: {
-          display: {
-            blocks: {
-              banks: {
-                name: 'Netbanking (recommended for test)',
-                instruments: [{ method: 'netbanking' }],
+        prefill: testMethods
+          ? { ...payload.prefill, method: 'netbanking' }
+          : payload.prefill,
+        ...(testMethods
+          ? {
+              config: {
+                display: {
+                  blocks: {
+                    banks: {
+                      name: 'Netbanking (recommended for test)',
+                      instruments: [{ method: 'netbanking' }],
+                    },
+                    upiCollect: {
+                      name: 'UPI ID',
+                      instruments: [{ method: 'upi', flows: ['collect'] }],
+                    },
+                    cards: {
+                      name: 'Cards',
+                      instruments: [{ method: 'card' }],
+                    },
+                  },
+                  sequence: ['block.banks', 'block.upiCollect', 'block.cards'],
+                  preferences: {
+                    show_default_blocks: false,
+                  },
+                },
               },
-              upiCollect: {
-                name: 'UPI ID',
-                instruments: [{ method: 'upi', flows: ['collect'] }],
-              },
-              cards: {
-                name: 'Cards',
-                instruments: [{ method: 'card' }],
-              },
-            },
-            sequence: ['block.banks', 'block.upiCollect', 'block.cards'],
-            preferences: {
-              show_default_blocks: false,
-            },
-          },
-        },
+            }
+          : {}),
         theme: payload.themeColor ? { color: payload.themeColor } : undefined,
         handler: (response) => {
           settled = true

@@ -1,3 +1,4 @@
+import { type FormEvent, useState } from "react"
 import { Clock3, Mail, MapPin, Phone } from "lucide-react"
 import { site } from "../data/site"
 import { Appear, EmergeLine, PageIntro } from "../components/MotionText"
@@ -14,6 +15,17 @@ function InstagramIcon({ size = 18 }: { size?: number }) {
 }
 
 export function VisitPage() {
+  const [name, setName] = useState("")
+  const [email, setEmail] = useState("")
+  const [note, setNote] = useState("")
+
+  const sendNote = (e: FormEvent) => {
+    e.preventDefault()
+    const subject = encodeURIComponent(`Hello from ${name.trim() || "the website"}`)
+    const body = encodeURIComponent(`${note.trim()}\n\n— ${name.trim()}\n${email.trim()}`)
+    window.location.href = `mailto:${site.email}?subject=${subject}&body=${body}`
+  }
+
   return (
     <section className="relative overflow-hidden px-5 pt-32 pb-20 md:px-8 md:pt-36 md:pb-28">
       <div
@@ -23,14 +35,14 @@ export function VisitPage() {
       <div className="relative mx-auto max-w-[1400px]">
         <PageIntro className="max-w-2xl">
           <Appear delay={60} as="p" className="text-[0.72rem] font-semibold tracking-[0.18em] text-burgundy">
-            VISIT
+            CONTACT US
           </Appear>
           <h1 className="mt-5 font-display text-[clamp(2.6rem,6vw,5rem)] leading-[1.05] tracking-[-0.035em] text-burgundy">
             <EmergeLine delay={140}>Pull up</EmergeLine>
             <EmergeLine delay={280}>a chair.</EmergeLine>
           </h1>
           <Appear delay={420} as="p" className="mt-6 text-[1.05rem] leading-relaxed text-ink-muted">
-            Walk-ins always welcome. Bring your chota, your bada, or just yourself.
+            Now open in Sector 49, Gurugram — Rodeo Drive, near Park Hospital. Walk-ins welcome.
           </Appear>
         </PageIntro>
 
@@ -43,7 +55,14 @@ export function VisitPage() {
               <ul className="mt-6 space-y-5 text-ink">
                 <li className="flex gap-3">
                   <MapPin size={18} className="mt-0.5 shrink-0 text-clay" />
-                  <span>{site.addressFull}</span>
+                  <a
+                    href={site.mapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="transition hover:text-clay"
+                  >
+                    {site.addressFull}
+                  </a>
                 </li>
                 <li className="flex gap-3">
                   <Phone size={18} className="mt-0.5 shrink-0 text-clay" />
@@ -64,7 +83,7 @@ export function VisitPage() {
                   <a
                     href={site.instagramUrl}
                     target="_blank"
-                    rel="noreferrer"
+                    rel="noopener noreferrer"
                     className="transition hover:text-clay"
                   >
                     {site.instagram}
@@ -76,15 +95,13 @@ export function VisitPage() {
                 <div className="flex items-start gap-3">
                   <Clock3 size={18} className="mt-0.5 shrink-0 text-clay" />
                   <div className="space-y-2 text-sm">
-                    <p>
-                      <span className="font-semibold">Mon – Thu</span> · 8:00 am – 11:00 pm
-                    </p>
-                    <p>
-                      <span className="font-semibold">Fri – Sat</span> · 8:00 am – 12:30 am
-                    </p>
-                    <p>
-                      <span className="font-semibold">Sunday</span> · 9:00 am – 11:00 pm · community
-                      table all day
+                    {site.hoursByDay.map((row) => (
+                      <p key={row.days}>
+                        <span className="font-semibold">{row.days}</span> · {row.time}
+                      </p>
+                    ))}
+                    <p className="text-ink-muted">
+                      {site.cuisines}. Delivery via {site.deliveryPartners}.
                     </p>
                   </div>
                 </div>
@@ -95,7 +112,7 @@ export function VisitPage() {
           <Reveal variant="right" delay={100}>
             <form
               className="relative overflow-hidden rounded-[1.75rem] p-6 text-cream glass-dark md:p-8"
-              onSubmit={(e) => e.preventDefault()}
+              onSubmit={sendNote}
             >
               <div
                 className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-clay/25 blur-2xl"
@@ -103,24 +120,30 @@ export function VisitPage() {
               />
               <h2 className="relative font-display text-3xl tracking-[-0.02em]">Say hello</h2>
               <p className="relative mt-3 text-sm leading-relaxed text-cream/70">
-                Reservations for six or more, collabs, or just a nice note.
+                Reservations for six or more, collabs, or just a nice note. Opens your email to {site.email}.
               </p>
               <div className="relative mt-6 space-y-3">
                 <input
                   required
                   placeholder="Name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                   className="w-full rounded-2xl border border-cream/15 bg-cream/5 px-4 py-3 text-sm text-cream outline-none transition placeholder:text-cream/40 focus:border-cream/40 focus:bg-cream/10"
                 />
                 <input
                   required
                   type="email"
                   placeholder="Email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="w-full rounded-2xl border border-cream/15 bg-cream/5 px-4 py-3 text-sm text-cream outline-none transition placeholder:text-cream/40 focus:border-cream/40 focus:bg-cream/10"
                 />
                 <textarea
                   required
                   rows={5}
                   placeholder="Your note"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
                   className="w-full rounded-2xl border border-cream/15 bg-cream/5 px-4 py-3 text-sm text-cream outline-none transition placeholder:text-cream/40 focus:border-cream/40 focus:bg-cream/10"
                 />
                 <button type="submit" className="btn-pill btn-cream">

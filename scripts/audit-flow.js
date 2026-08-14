@@ -123,7 +123,7 @@ async function main() {
   });
   console.log({ status: collected.status, logs: collected.statusLogs.map((l) => l.status) });
 
-  console.log('10) online payment confirm signature path (fake HMAC)');
+  console.log('10) online payment checkout');
   const online = await req('/orders', {
     method: 'POST',
     body: JSON.stringify({
@@ -138,24 +138,41 @@ async function main() {
     headers: onlineAccess,
     body: JSON.stringify({ method: 'upi' }),
   });
-  const checkout = await req(`/payments/orders/${online.id}/checkout`, {
-    method: 'POST',
-    headers: onlineAccess,
-  });
-  const paymentId = `pay_mock_${Date.now()}`;
-  const razorpaySignature = createHmac('sha256', 'mock')
-    .update(`${checkout.razorpayOrderId}|${paymentId}`)
-    .digest('hex');
-  const paid = await req(`/payments/orders/${online.id}/confirm`, {
-    method: 'POST',
-    headers: onlineAccess,
-    body: JSON.stringify({
+
+  let checkout;
+  try {
+    checkout = await req(`/payments/orders/${online.id}/checkout`, {
+      method: 'POST',
+      headers: onlineAccess,
+    });
+  } catch (err) {
+    throw new Error(
+      `Online checkout failed (${err.message}). Local audit expects PAYMENT_ADAPTER=fake and ALLOW_FAKE_PAYMENTS=1. Live mode needs valid RAZORPAY_KEY_ID / KEY_SECRET.`,
+    );
+  }
+
+  if (checkout.keyId === 'mock') {
+    const paymentId = `pay_mock_${Date.now()}`;
+    const razorpaySignature = createHmac('sha256', 'mock')
+      .update(`${checkout.razorpayOrderId}|${paymentId}`)
+      .digest('hex');
+    const paid = await req(`/payments/orders/${online.id}/confirm`, {
+      method: 'POST',
+      headers: onlineAccess,
+      body: JSON.stringify({
+        razorpayOrderId: checkout.razorpayOrderId,
+        razorpayPaymentId: paymentId,
+        razorpaySignature,
+      }),
+    });
+    console.log({ onlineStatus: paid.status, paymentStatus: paid.paymentStatus });
+  } else {
+    console.log({
+      liveCheckout: true,
       razorpayOrderId: checkout.razorpayOrderId,
-      razorpayPaymentId: paymentId,
-      razorpaySignature,
-    }),
-  });
-  console.log({ onlineStatus: paid.status, paymentStatus: paid.paymentStatus });
+      keyPrefix: String(checkout.keyId || '').slice(0, 8),
+    });
+  }
 
   console.log('11) aggregator stub (signed)');
   const aggBody = {

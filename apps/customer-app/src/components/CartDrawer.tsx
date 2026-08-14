@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { Minus, Plus, Trash2, X } from "lucide-react"
 import type { OrderDetail, RazorpayCheckoutPayload } from "@cafe/shared-types"
 import { useCart } from "../context/CartContext"
@@ -11,7 +11,7 @@ function formatPrice(price: number) {
   return `₹${price}`
 }
 
-type Step = "cart" | "checkout" | "done" | "failed"
+type Step = "cart" | "checkout" | "done"
 
 export function CartDrawer() {
   const {
@@ -34,11 +34,24 @@ export function CartDrawer() {
   const [mobile, setMobile] = useState("")
   const [email, setEmail] = useState("")
   const [payMethod, setPayMethod] = useState<"pay_at_counter" | "upi">("pay_at_counter")
+  const [onlinePay, setOnlinePay] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [placed, setPlaced] = useState<OrderDetail | null>(null)
 
   const canConfirm = name.trim().length > 0 && mobile.trim().length >= 8
+
+  useEffect(() => {
+    void api
+      .get<{ available: boolean }>("/payments/online")
+      .then((result) => {
+        setOnlinePay(result.available)
+        if (!result.available) setPayMethod("pay_at_counter")
+      })
+      .catch(() => {
+        /* stay on pay-at-counter until the API confirms online pay */
+      })
+  }, [])
 
   useEffect(() => {
     if (!isOpen) {
@@ -96,8 +109,11 @@ export function CartDrawer() {
           checkedOut.id,
         )
 
-        // Local fake adapter — no real Checkout keys; keep smoke/dev path.
+        // Local fake adapter — no real Checkout keys. Never mock-confirm in production.
         if (checkout.keyId === "mock") {
+          if (!import.meta.env.DEV) {
+            throw new Error("Online payment is not available yet. Please pay at the counter.")
+          }
           const paid = await api.post<OrderDetail>(
             `/payments/orders/${checkedOut.id}/mock-confirm`,
             { razorpayOrderId: checkout.razorpayOrderId },
@@ -125,7 +141,7 @@ export function CartDrawer() {
       setStep("done")
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
-      setStep("failed")
+      setStep("checkout")
     } finally {
       setBusy(false)
     }
@@ -202,22 +218,14 @@ export function CartDrawer() {
             </div>
           )}
 
-          {step === "failed" && (
-            <div className="space-y-3">
-              <p className="text-sm text-burgundy">Could not place order.</p>
-              <p className="text-xs text-ink-muted break-words">{error}</p>
-              <button
-                type="button"
-                className="btn-pill btn-ink w-full justify-center !py-2.5 text-sm"
-                onClick={() => setStep("checkout")}
-              >
-                Try again
-              </button>
-            </div>
-          )}
-
           {step === "checkout" && (
             <div className="space-y-4">
+              {error && (
+                <div className="space-y-1 rounded-2xl border border-burgundy/20 bg-burgundy/8 px-4 py-3">
+                  <p className="text-sm text-burgundy">Could not place order.</p>
+                  <p className="text-xs text-ink-muted break-words">{error}</p>
+                </div>
+              )}
               <p className="text-sm text-ink-muted">
                 Walk-in pickup · paid before the kitchen starts.
               </p>
@@ -270,15 +278,17 @@ export function CartDrawer() {
                 >
                   Pay at counter
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setPayMethod("upi")}
-                  className={`rounded-2xl px-4 py-3.5 text-left text-sm font-semibold transition active:scale-[0.98] ${
-                    payMethod === "upi" ? "bg-burgundy text-cream" : "glass-soft text-ink"
-                  }`}
-                >
-                  Pay online (UPI / card)
-                </button>
+                {onlinePay && (
+                  <button
+                    type="button"
+                    onClick={() => setPayMethod("upi")}
+                    className={`rounded-2xl px-4 py-3.5 text-left text-sm font-semibold transition active:scale-[0.98] ${
+                      payMethod === "upi" ? "bg-burgundy text-cream" : "glass-soft text-ink"
+                    }`}
+                  >
+                    Pay online (UPI / card)
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -442,7 +452,15 @@ export function CartDrawer() {
               </div>
             )}
             <p className="mt-3 text-center text-xs text-ink-muted">
-              Walk-in pickup · pay before kitchen
+              Walk-in pickup · pay before kitchen. By confirming you agree to our{" "}
+              <Link to="/terms" onClick={closeCart} className="underline underline-offset-2">
+                Terms
+              </Link>{" "}
+              and{" "}
+              <Link to="/refunds" onClick={closeCart} className="underline underline-offset-2">
+                Refund Policy
+              </Link>
+              .
             </p>
           </div>
         )}

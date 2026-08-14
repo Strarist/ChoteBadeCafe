@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   Headers,
   Param,
   Post,
@@ -18,6 +19,11 @@ import { OrderOrStaffAccessGuard } from '../auth/order-or-staff.guard';
 @Controller('payments')
 export class PaymentController {
   constructor(private readonly payments: PaymentService) {}
+
+  @Get('online')
+  onlineAvailability(): { available: boolean } {
+    return { available: this.payments.onlinePayEnabled() };
+  }
 
   @Post('orders/:orderId/checkout')
   @UseGuards(OrderOrStaffAccessGuard('orderId'))

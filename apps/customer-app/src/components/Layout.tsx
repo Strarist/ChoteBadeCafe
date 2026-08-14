@@ -26,7 +26,12 @@ export function Layout() {
       "/menu": "Menu — Chote Bade",
       "/journal": "Journal — Chote Bade",
       "/memory-wall": "Memory Wall — Chote Bade",
-      "/visit": "Visit — Chote Bade",
+      "/visit": "Contact Us — Chote Bade",
+      "/contact": "Contact Us — Chote Bade",
+      "/privacy": "Privacy Policy — Chote Bade",
+      "/terms": "Terms and Conditions — Chote Bade",
+      "/refunds": "Cancellation and Refunds — Chote Bade",
+      "/shipping": "Shipping Policy — Chote Bade",
     }
     document.title = titles[pathname] ?? "Chote Bade Café"
   }, [pathname])
