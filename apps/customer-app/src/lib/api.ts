@@ -26,7 +26,7 @@ async function request<T>(path: string, init: RequestInit = {}, orderId?: string
   const res = await fetch(joinApiUrl(path), {
     ...rest,
     headers: {
-      'Content-Type': 'application/json',
+      ...(rest.body ? { 'Content-Type': 'application/json' } : {}),
       ...(access ? { 'X-Order-Access': access } : {}),
       ...(initHeaders ?? {}),
     },

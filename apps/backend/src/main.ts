@@ -3,7 +3,7 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import type { NestExpressApplication } from '@nestjs/platform-express';
-import { parseCorsOrigins } from './cors.util';
+import { envCorsIsLocalhostOnly, parseCorsOrigins } from './cors.util';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -28,12 +28,13 @@ async function bootstrap() {
   );
 
   const corsOrigins = parseCorsOrigins(process.env.CORS_ORIGINS);
-  if (process.env.NODE_ENV === 'production' && corsOrigins.every((o) => /localhost|127\.0\.0\.1/.test(o))) {
+  if (process.env.NODE_ENV === 'production' && envCorsIsLocalhostOnly(process.env.CORS_ORIGINS)) {
     throw new Error(
       'CORS_ORIGINS is still localhost-only. Set the three static-site https origins before production.',
     );
   }
 
+  logger.log(`CORS allowlist: ${corsOrigins.join(', ')}`);
   app.enableCors({
     origin: corsOrigins,
     credentials: true,

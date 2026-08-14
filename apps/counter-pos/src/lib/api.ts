@@ -17,7 +17,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(joinApiUrl(path), {
     ...rest,
     headers: {
-      'Content-Type': 'application/json',
+      ...(rest.body ? { 'Content-Type': 'application/json' } : {}),
       ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
       ...(initHeaders ?? {}),
     },

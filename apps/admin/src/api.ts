@@ -7,7 +7,7 @@ export async function api<T>(
   const res = await fetch(joinApiUrl(path), {
     method: opts?.method ?? 'GET',
     headers: {
-      'Content-Type': 'application/json',
+      ...(opts?.body ? { 'Content-Type': 'application/json' } : {}),
       ...(opts?.token ? { Authorization: `Bearer ${opts.token}` } : {}),
     },
     body: opts?.body ? JSON.stringify(opts.body) : undefined,
