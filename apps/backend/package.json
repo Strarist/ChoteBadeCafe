@@ -74,6 +74,9 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "moduleNameMapper": {
+      "^@cafe/shared-types$": "<rootDir>/../../../packages/shared-types/src/index.ts"
+    }
   }
 }

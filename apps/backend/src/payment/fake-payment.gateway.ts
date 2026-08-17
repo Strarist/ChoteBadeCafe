@@ -12,6 +12,10 @@ export class FakePaymentGateway implements PaymentGateway {
 
   constructor(private readonly config: ConfigService) {}
 
+  publicKeyId(): string {
+    return 'mock';
+  }
+
   async createCheckout(input: {
     orderId: string;
     amountPaise: number;

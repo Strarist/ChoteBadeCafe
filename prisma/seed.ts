@@ -5,6 +5,7 @@ const prisma = new PrismaClient();
 
 /** Design-demo menu (rupees → paise). Matches the Chote Bade brand site. */
 const PLACEHOLDER_ITEMS = [
+  { petpoojaItemId: 'pp-test-one-rupee', name: 'TEST CHECKOUT ₹1', description: 'Mock item for payment testing. Do not serve.', price: 100, category: 'Test', isAvailable: true },
   { petpoojaItemId: 'pp-babas-espresso', name: "BABA'S ESPRESSO", description: 'Short, strong, no small talk.', price: 16000, category: 'Coffee', isAvailable: true },
   { petpoojaItemId: 'pp-americano', name: 'AMERICANO', description: 'Long black, quietly certain.', price: 18000, category: 'Coffee', isAvailable: true },
   { petpoojaItemId: 'pp-cortado', name: 'CORTADO', description: 'Equal parts heat and hush.', price: 19000, category: 'Coffee', isAvailable: true },
@@ -50,7 +51,22 @@ async function main() {
     }
   } else {
     console.log('Menu already present — skipping item insert');
+    const testCheckout = PLACEHOLDER_ITEMS.find((item) => item.petpoojaItemId === 'pp-test-one-rupee');
+    if (testCheckout) {
+      const existingTest = await prisma.menuItem.findFirst({
+        where: { petpoojaItemId: testCheckout.petpoojaItemId },
+      });
+      if (!existingTest) {
+        await prisma.menuItem.create({
+          data: { ...testCheckout, syncedAt: now },
+        });
+      }
+    }
   }
+
+  const staffCountBefore = await prisma.staffUser.count();
+  const bootstrapPin = process.env.BOOTSTRAP_ADMIN_PIN?.trim();
+  const bootstrapName = (process.env.BOOTSTRAP_ADMIN_NAME ?? 'Admin').trim() || 'Admin';
 
   for (const s of STAFF) {
     const existing = await prisma.staffUser.findFirst({ where: { name: s.name } });
@@ -71,6 +87,24 @@ async function main() {
     await prisma.staffUser.create({
       data: { name: s.name, role: s.role, pinHash: await bcrypt.hash(s.pin, 10), isActive: true },
     });
+  }
+
+  if (isProd && staffCountBefore === 0 && (await prisma.staffUser.count()) === 0) {
+    if (!bootstrapPin || !/^\d{4,8}$/.test(bootstrapPin) || bootstrapPin === '1234') {
+      console.warn(
+        'No staff users. Set BOOTSTRAP_ADMIN_PIN (4–8 digits, not 1234) once, redeploy, then unset it.',
+      );
+    } else {
+      await prisma.staffUser.create({
+        data: {
+          name: bootstrapName,
+          role: 'admin',
+          pinHash: await bcrypt.hash(bootstrapPin, 10),
+          isActive: true,
+        },
+      });
+      console.log(`Created bootstrap admin "${bootstrapName}" — unset BOOTSTRAP_ADMIN_PIN after first login`);
+    }
   }
 
   const count = await prisma.menuItem.count();

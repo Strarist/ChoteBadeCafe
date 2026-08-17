@@ -4,8 +4,15 @@ import { Minus, Plus, Trash2, X } from "lucide-react"
 import type { OrderDetail, RazorpayCheckoutPayload } from "@cafe/shared-types"
 import { useCart } from "../context/CartContext"
 import { api, storeOrderAccess } from "../lib/api"
+import {
+  clearPendingCheckout,
+  loadPendingCheckout,
+  savePendingCheckout,
+  type PendingCheckout,
+} from "../lib/checkoutRecovery"
 import { openRazorpayCheckout } from "../lib/razorpayCheckout"
 import { getLenis } from "../hooks/useSmoothScroll"
+import { isPaidOrderStatus, toCustomerError } from "../lib/customerError"
 
 function formatPrice(price: number) {
   return `₹${price}`
@@ -38,8 +45,21 @@ export function CartDrawer() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [placed, setPlaced] = useState<OrderDetail | null>(null)
+  const [pendingCheckout, setPendingCheckout] = useState<PendingCheckout | null>(null)
 
   const canConfirm = name.trim().length > 0 && mobile.trim().length >= 8
+
+  useEffect(() => {
+    if (!isOpen) return
+    const saved = loadPendingCheckout()
+    if (saved) {
+      setPendingCheckout(saved)
+      setName(saved.name)
+      setMobile(saved.mobile)
+      setPayMethod(saved.payMethod)
+      setStep("checkout")
+    }
+  }, [isOpen])
 
   useEffect(() => {
     if (!isOpen) return
@@ -76,8 +96,159 @@ export function CartDrawer() {
     }
   }, [isOpen, closeCart])
 
+  const persistPending = (partial: PendingCheckout) => {
+    savePendingCheckout(partial)
+    setPendingCheckout(partial)
+  }
+
+  const finishSuccess = (order: OrderDetail) => {
+    clearPendingCheckout()
+    setPendingCheckout(null)
+    setPlaced(order)
+    clearCart()
+    setStep("done")
+  }
+
+  const runUpiPayment = async (orderId: string): Promise<OrderDetail> => {
+    const existing = loadPendingCheckout()
+    if (existing?.razorpay) {
+      return confirmOnlinePayment(orderId, existing.razorpay)
+    }
+
+    const checkout = await api.post<RazorpayCheckoutPayload>(
+      `/payments/orders/${orderId}/checkout`,
+      undefined,
+      orderId,
+    )
+
+    if (checkout.keyId === "mock") {
+      if (!import.meta.env.DEV) {
+        throw new Error("Online payment is not available yet. Please pay at the counter.")
+      }
+      return api.post<OrderDetail>(
+        `/payments/orders/${orderId}/mock-confirm`,
+        { razorpayOrderId: checkout.razorpayOrderId },
+        orderId,
+      )
+    }
+
+    const result = await openRazorpayCheckout(checkout)
+    const razorpay = {
+      razorpayOrderId: result.razorpayOrderId,
+      razorpayPaymentId: result.razorpayPaymentId,
+      razorpaySignature: result.razorpaySignature,
+    }
+    const pending = loadPendingCheckout()
+    if (pending) {
+      persistPending({ ...pending, razorpay, step: "checked_out", savedAt: Date.now() })
+    }
+    return confirmOnlinePayment(orderId, razorpay)
+  }
+
+  const confirmOnlinePayment = async (
+    orderId: string,
+    razorpay: { razorpayOrderId: string; razorpayPaymentId: string; razorpaySignature: string },
+  ): Promise<OrderDetail> => {
+    let lastErr: unknown
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        return await api.post<OrderDetail>(
+          `/payments/orders/${orderId}/confirm`,
+          razorpay,
+          orderId,
+        )
+      } catch (confirmErr) {
+        lastErr = confirmErr
+        await new Promise((r) => setTimeout(r, 600 * (attempt + 1)))
+      }
+    }
+    const msg = toCustomerError(lastErr)
+    throw new Error(`${msg} You can track this order from the status page.`)
+  }
+
+  const completeCheckout = async (
+    orderId: string,
+    accessToken: string | undefined,
+    method: "pay_at_counter" | "upi",
+    customerName: string,
+    customerMobile: string,
+  ): Promise<OrderDetail> => {
+    if (accessToken) storeOrderAccess(orderId, accessToken)
+
+    const pending = loadPendingCheckout()
+    if (!pending || pending.step === "created") {
+      const checkedOut = await api.post<OrderDetail>(
+        `/orders/${orderId}/checkout`,
+        { method: method === "upi" ? "upi" : "pay_at_counter" },
+        orderId,
+      )
+      persistPending({
+        orderId,
+        accessToken,
+        payMethod: method,
+        step: "checked_out",
+        name: customerName,
+        mobile: customerMobile,
+        savedAt: Date.now(),
+      })
+      if (method === "upi") {
+        return runUpiPayment(checkedOut.id)
+      }
+      return checkedOut
+    }
+
+    if (method === "upi") {
+      return runUpiPayment(orderId)
+    }
+
+    return api.get<OrderDetail>(`/orders/${orderId}`, orderId)
+  }
+
+  const resumeCheckout = async () => {
+    const pending = pendingCheckout ?? loadPendingCheckout()
+    if (!pending) return
+    setBusy(true)
+    setError(null)
+    try {
+      if (pending.accessToken) storeOrderAccess(pending.orderId, pending.accessToken)
+      const current = await api.get<OrderDetail>(`/orders/${pending.orderId}`, pending.orderId)
+      if (isPaidOrderStatus(current.status) || current.paymentStatus === "paid") {
+        finishSuccess(current)
+        return
+      }
+      const result = await completeCheckout(
+        pending.orderId,
+        pending.accessToken,
+        pending.payMethod,
+        pending.name,
+        pending.mobile,
+      )
+      finishSuccess(result)
+    } catch (err) {
+      setError(toCustomerError(err))
+      setStep("checkout")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const dismissPendingCheckout = () => {
+    const pending = pendingCheckout ?? loadPendingCheckout()
+    clearPendingCheckout()
+    setPendingCheckout(null)
+    setError(null)
+    if (pending?.orderId) {
+      closeCart()
+      navigate(`/order/${pending.orderId}`)
+    }
+  }
+
   const submitOrder = async () => {
     if (!canConfirm) return
+    if (pendingCheckout) {
+      await resumeCheckout()
+      return
+    }
     setBusy(true)
     setError(null)
     try {
@@ -96,55 +267,27 @@ export function CartDrawer() {
           instructions: item.instructions || null,
         })),
       })
-      if (created.accessToken) {
-        storeOrderAccess(created.id, created.accessToken)
-      }
 
-      const checkedOut = await api.post<OrderDetail>(
-        `/orders/${created.id}/checkout`,
-        { method: payMethod === "upi" ? "upi" : "pay_at_counter" },
+      persistPending({
+        orderId: created.id,
+        accessToken: created.accessToken,
+        payMethod,
+        step: "created",
+        name: name.trim(),
+        mobile: mobile.trim(),
+        savedAt: Date.now(),
+      })
+
+      const result = await completeCheckout(
         created.id,
+        created.accessToken,
+        payMethod,
+        name.trim(),
+        mobile.trim(),
       )
-
-      if (payMethod === "upi") {
-        const checkout = await api.post<RazorpayCheckoutPayload>(
-          `/payments/orders/${checkedOut.id}/checkout`,
-          undefined,
-          checkedOut.id,
-        )
-
-        // Local fake adapter — no real Checkout keys. Never mock-confirm in production.
-        if (checkout.keyId === "mock") {
-          if (!import.meta.env.DEV) {
-            throw new Error("Online payment is not available yet. Please pay at the counter.")
-          }
-          const paid = await api.post<OrderDetail>(
-            `/payments/orders/${checkedOut.id}/mock-confirm`,
-            { razorpayOrderId: checkout.razorpayOrderId },
-            checkedOut.id,
-          )
-          setPlaced(paid)
-        } else {
-          const result = await openRazorpayCheckout(checkout)
-          const paid = await api.post<OrderDetail>(
-            `/payments/orders/${checkedOut.id}/confirm`,
-            {
-              razorpayOrderId: result.razorpayOrderId,
-              razorpayPaymentId: result.razorpayPaymentId,
-              razorpaySignature: result.razorpaySignature,
-            },
-            checkedOut.id,
-          )
-          setPlaced(paid)
-        }
-      } else {
-        setPlaced(checkedOut)
-      }
-
-      clearCart()
-      setStep("done")
+      finishSuccess(result)
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
+      setError(toCustomerError(err))
       setStep("checkout")
     } finally {
       setBusy(false)
@@ -224,11 +367,54 @@ export function CartDrawer() {
 
           {step === "checkout" && (
             <div className="space-y-4">
+              {pendingCheckout && (
+                <div className="space-y-2 rounded-2xl border border-clay/30 bg-clay/10 px-4 py-3">
+                  <p className="text-sm font-semibold text-burgundy">Incomplete checkout</p>
+                  <p className="text-xs text-ink-muted">
+                    Your order was started but not finished. Resume to avoid placing a duplicate.
+                    “Start fresh” keeps this ticket at the till so staff can take cash.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className="btn-pill btn-clay !py-2 text-xs"
+                      disabled={busy}
+                      onClick={() => void resumeCheckout()}
+                    >
+                      Resume checkout
+                    </button>
+                    <Link
+                      to={`/order/${pendingCheckout.orderId}`}
+                      className="btn-pill btn-ink !py-2 text-xs"
+                      onClick={closeCart}
+                    >
+                      View order status
+                    </Link>
+                    <button
+                      type="button"
+                      className="text-xs text-ink-muted underline underline-offset-2"
+                      disabled={busy}
+                      onClick={dismissPendingCheckout}
+                    >
+                    Start fresh / pay at counter
+                    </button>
+                  </div>
+                </div>
+              )}
               {error && (
                 <div className="space-y-1 rounded-2xl border border-burgundy/20 bg-burgundy/8 px-4 py-3">
                   <p className="text-sm text-burgundy">Could not place order.</p>
                   <p className="text-xs text-ink-muted break-words">{error}</p>
                 </div>
+              )}
+              {error && pendingCheckout && /status page/i.test(error) && (
+                <Link
+                  to={`/order/${pendingCheckout.orderId}`}
+                  className="btn-pill btn-clay inline-flex w-full justify-center !py-2.5 text-sm"
+                  onClick={closeCart}
+                >
+                  Check order status
+                </Link>
               )}
               <p className="text-sm text-ink-muted">
                 Walk-in pickup · paid before the kitchen starts.

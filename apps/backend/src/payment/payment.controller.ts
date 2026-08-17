@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -50,6 +51,9 @@ export class PaymentController {
     @Param('orderId') orderId: string,
     @Body() body: { razorpayOrderId: string },
   ): Promise<OrderDetail> {
+    if (process.env.NODE_ENV === 'production') {
+      throw new BadRequestException('Online payment is not available yet. Please pay at the counter.');
+    }
     return this.payments.mockConfirm(orderId, body.razorpayOrderId);
   }
 

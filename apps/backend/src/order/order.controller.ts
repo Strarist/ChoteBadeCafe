@@ -29,7 +29,7 @@ import type { Request } from 'express';
 
 @Controller('orders')
 export class OrderController {
-  private readonly createIpLimit = new InMemoryRateLimit(30, 60 * 1000);
+  private readonly createIpLimit = new InMemoryRateLimit(120, 60 * 1000);
 
   constructor(private readonly orders: OrderService) {}
 
@@ -92,6 +92,20 @@ export class OrderController {
       dto.method,
       req.staff!.staffUserId,
     );
+  }
+
+  @Post(':id/preparing')
+  @UseGuards(StaffAuthGuard, RolesGuard)
+  @Roles('admin', 'manager', 'cashier')
+  markPreparing(@Param('id') id: string, @Req() req: AuthenticatedRequest): Promise<OrderDetail> {
+    return this.orders.markPreparing(id, req.staff!.staffUserId);
+  }
+
+  @Post(':id/ready')
+  @UseGuards(StaffAuthGuard, RolesGuard)
+  @Roles('admin', 'manager', 'cashier')
+  markReady(@Param('id') id: string, @Req() req: AuthenticatedRequest): Promise<OrderDetail> {
+    return this.orders.markReady(id, req.staff!.staffUserId);
   }
 
   @Post(':id/claim')

@@ -23,17 +23,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { OrderTokenService } from './order-token.service';
 import { OrderAccessService } from './order-access.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
-
-const ALLOWED: Record<OrderStatus, OrderStatus[]> = {
-  cart_building: ['awaiting_payment', 'cancelled'],
-  awaiting_payment: ['payment_failed', 'confirmed', 'cancelled'],
-  payment_failed: ['awaiting_payment', 'cancelled'],
-  confirmed: ['preparing', 'cancelled'],
-  preparing: ['ready_for_handover', 'cancelled'],
-  ready_for_handover: ['collected', 'cancelled'],
-  collected: [],
-  cancelled: [],
-};
+import { ALLOWED_ORDER_TRANSITIONS, isPaidKitchenStatus } from './order-status';
 
 type OrderInclude = Prisma.OrderGetPayload<{
   include: {
@@ -138,7 +128,7 @@ export class OrderService {
     const orders = await this.prisma.order.findMany({
       where: status ? { status } : undefined,
       orderBy: { createdAt: 'desc' },
-      take: 100,
+      take: 200,
       include: this.detailInclude(),
     });
     return orders.map((o) => this.toDetail(o));
@@ -200,10 +190,25 @@ export class OrderService {
     method: PaymentMethod,
   ): Promise<OrderDetail> {
     const order = await this.findById(orderId);
+    if (isPaidKitchenStatus(order.status)) {
+      return order;
+    }
+    if (order.status === 'awaiting_payment') {
+      const pending = order.payments.find((p) => p.status === 'pending');
+      if (pending && pending.method === method) return order;
+      throw new BadRequestException(
+        'Order is already awaiting payment. Resume the existing checkout instead of starting a new one.',
+      );
+    }
     if (order.status !== 'cart_building' && order.status !== 'payment_failed') {
       throw new BadRequestException(`Cannot checkout from status ${order.status}`);
     }
     if (!order.items.length) throw new BadRequestException('Cart is empty');
+
+    await this.prisma.payment.updateMany({
+      where: { orderId, status: PaymentRecordStatus.pending },
+      data: { status: PaymentRecordStatus.failed },
+    });
 
     await this.prisma.payment.create({
       data: {
@@ -223,15 +228,16 @@ export class OrderService {
     staffUserId?: string,
   ): Promise<OrderDetail> {
     const order = await this.findById(orderId);
-    if (order.status !== 'awaiting_payment') {
+    if (isPaidKitchenStatus(order.status) || order.paymentStatus === 'paid') {
+      return order;
+    }
+    if (order.status !== 'awaiting_payment' && order.status !== 'payment_failed') {
       throw new BadRequestException('Order is not awaiting payment');
     }
 
-    const pending = order.payments.find(
-      (p) => p.status === 'pending' && p.method === 'pay_at_counter',
-    );
+    const pending = order.payments.find((p) => p.status === 'pending');
     if (!pending) {
-      throw new BadRequestException('No pending pay-at-counter payment');
+      throw new BadRequestException('No pending payment to collect at the counter');
     }
 
     await this.prisma.payment.update({
@@ -268,10 +274,20 @@ export class OrderService {
   }
 
   async markPaymentFailed(orderId: string): Promise<OrderDetail> {
-    await this.prisma.order.update({
-      where: { id: orderId },
-      data: { paymentStatus: PaymentStatus.failed },
-    });
+    const order = await this.findById(orderId);
+    if (isPaidKitchenStatus(order.status) || order.paymentStatus === 'paid') {
+      return order;
+    }
+    await this.prisma.$transaction([
+      this.prisma.payment.updateMany({
+        where: { orderId, status: PaymentRecordStatus.pending },
+        data: { status: PaymentRecordStatus.failed },
+      }),
+      this.prisma.order.update({
+        where: { id: orderId },
+        data: { paymentStatus: PaymentStatus.failed },
+      }),
+    ]);
     const detail = await this.transition(orderId, 'payment_failed', 'system');
     this.realtime.emitOrderPaymentFailed({
       orderId: detail.id,
@@ -291,6 +307,9 @@ export class OrderService {
     }
 
     const order = await this.findById(orderId);
+    if (isPaidKitchenStatus(order.status) && order.paymentStatus === 'paid') {
+      return order;
+    }
     const pending = order.payments.find((p) => p.status === 'pending');
     if (pending) {
       await this.prisma.payment.update({
@@ -338,7 +357,7 @@ export class OrderService {
     if (previous === newStatus) {
       return this.findById(orderId);
     }
-    const allowed = ALLOWED[previous] ?? [];
+    const allowed = ALLOWED_ORDER_TRANSITIONS[previous] ?? [];
     if (!allowed.includes(newStatus)) {
       throw new BadRequestException(`Illegal transition ${previous} → ${newStatus}`);
     }
@@ -385,6 +404,21 @@ export class OrderService {
     }
 
     return this.findById(orderId);
+  }
+
+  async markPreparing(orderId: string, staffUserId: string): Promise<OrderDetail> {
+    return this.transition(orderId, 'preparing', 'staff', staffUserId);
+  }
+
+  async markReady(orderId: string, staffUserId: string): Promise<OrderDetail> {
+    const order = await this.requireOrder(orderId);
+    if (order.status === 'ready_for_handover') return this.findById(orderId);
+    if (order.status === 'confirmed') {
+      await this.transition(orderId, 'preparing', 'staff', staffUserId);
+    }
+    return this.transition(orderId, 'ready_for_handover', 'staff', staffUserId, {
+      readyAt: new Date(),
+    });
   }
 
   async claimForCollect(orderId: string, staffUserId: string): Promise<OrderDetail> {

@@ -1,39 +1,66 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import type { OrderDetail } from "@cafe/shared-types"
 import { api } from "../lib/api"
 import { Appear, PageIntro } from "../components/MotionText"
 
+const STATUS_COPY: Record<string, string> = {
+  cart_building: "Still building your order",
+  awaiting_payment: "Waiting for payment",
+  payment_failed: "Payment didn’t go through",
+  confirmed: "Paid — with the kitchen",
+  preparing: "Being prepared",
+  ready_for_handover: "Ready for pickup",
+  collected: "Collected",
+  cancelled: "Cancelled",
+}
+
+function isNotFound(err: unknown): boolean {
+  return err instanceof Error && /\b404\b|not found/i.test(err.message)
+}
+
 export function OrderStatusPage() {
   const { orderId } = useParams<{ orderId: string }>()
   const [order, setOrder] = useState<OrderDetail | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [refreshError, setRefreshError] = useState<string | null>(null)
+  const [fatalError, setFatalError] = useState<string | null>(null)
+  const [polling, setPolling] = useState(true)
+  const hadOrderRef = useRef(false)
+
+  const load = useCallback(async () => {
+    if (!orderId) return
+    try {
+      const data = await api.get<OrderDetail>(`/orders/${orderId}`, orderId)
+      hadOrderRef.current = true
+      setOrder(data)
+      setRefreshError(null)
+      setFatalError(null)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      if (!hadOrderRef.current && isNotFound(err)) {
+        setFatalError("Order not found. Check the link or place a new order from the menu.")
+      } else {
+        setRefreshError(message)
+      }
+    }
+  }, [orderId])
 
   useEffect(() => {
     if (!orderId) return
-    let cancelled = false
-
-    async function load() {
-      try {
-        const data = await api.get<OrderDetail>(`/orders/${orderId}`, orderId)
-        if (!cancelled) {
-          setOrder(data)
-          setError(null)
-        }
-      } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : String(err))
-      }
-    }
+    setOrder(null)
+    setRefreshError(null)
+    setFatalError(null)
+    setPolling(true)
+    hadOrderRef.current = false
 
     void load()
-    // Prefer short polling over public Socket.IO order events (staff-only rooms now).
     const poll = window.setInterval(() => void load(), 2500)
 
     return () => {
-      cancelled = true
       window.clearInterval(poll)
+      setPolling(false)
     }
-  }, [orderId])
+  }, [orderId, load])
 
   return (
     <div className="paper-bg min-h-screen px-5 pb-24 pt-28 md:px-8">
@@ -43,12 +70,49 @@ export function OrderStatusPage() {
             ORDER STATUS
           </Appear>
         </PageIntro>
-        {error && <p className="mt-4 text-sm text-burgundy">{error}</p>}
+
+        {fatalError && !order && (
+          <div className="mt-4 space-y-3">
+            <p className="text-sm text-burgundy">{fatalError}</p>
+            <Link to="/menu" className="btn-pill btn-clay inline-flex">
+              Back to menu
+            </Link>
+          </div>
+        )}
+
+        {refreshError && order && (
+          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-burgundy/20 bg-burgundy/8 px-4 py-3">
+            <p className="text-xs text-ink-muted">
+              Can&apos;t refresh status{polling ? " — retrying…" : ""}. Showing last update.
+            </p>
+            <button
+              type="button"
+              className="text-xs font-semibold text-burgundy underline underline-offset-2"
+              onClick={() => void load()}
+            >
+              Retry now
+            </button>
+          </div>
+        )}
+
+        {refreshError && !order && !fatalError && (
+          <div className="mt-4 space-y-3">
+            <p className="text-sm text-burgundy">{refreshError}</p>
+            <button
+              type="button"
+              className="btn-pill btn-clay"
+              onClick={() => void load()}
+            >
+              Retry now
+            </button>
+          </div>
+        )}
+
         {order && (
           <div className="mt-6 rounded-[1.75rem] border border-[#d8cfc0]/70 bg-[#f7f1e7]/55 p-6">
             <p className="font-display text-4xl text-burgundy">{order.token}</p>
-            <p className="mt-2 text-sm capitalize text-ink-muted">
-              {order.status.replaceAll("_", " ")}
+            <p className="mt-2 text-sm text-ink-muted">
+              {STATUS_COPY[order.status] ?? order.status.replaceAll("_", " ")}
             </p>
             <p className="mt-1 text-sm text-ink-muted">{order.customer.name}</p>
             <ul className="mt-6 space-y-2 border-t border-ink/10 pt-4">
@@ -63,8 +127,14 @@ export function OrderStatusPage() {
             </ul>
             {order.status === "payment_failed" && (
               <Link to="/menu" className="btn-pill btn-clay mt-6 inline-flex">
-                Retry from menu
+                Order again from menu
               </Link>
+            )}
+            {order.status === "awaiting_payment" && (
+              <p className="mt-4 text-xs text-ink-muted">
+                If you already paid, wait a moment — we’ll update this page. Otherwise pay at the
+                counter with token {order.token}.
+              </p>
             )}
           </div>
         )}

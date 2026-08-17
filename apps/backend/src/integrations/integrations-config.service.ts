@@ -81,6 +81,11 @@ export class IntegrationsConfigService implements OnModuleInit {
         'PAYMENT_ADAPTER=live but Razorpay credentials are missing. Set RAZORPAY_* or use fake.',
       );
     }
+    if (this.paymentMode() === 'live' && !stripEnv(this.config.get<string>('RAZORPAY_WEBHOOK_SECRET'))) {
+      throw new Error(
+        'PAYMENT_ADAPTER=live requires RAZORPAY_WEBHOOK_SECRET so captured payments can confirm if Checkout.js fails.',
+      );
+    }
     if (this.notificationMode() === 'live' && !this.hasNotificationCredentials()) {
       throw new Error(
         'NOTIFICATION_ADAPTER=live but WhatsApp/SMS credentials are missing. Configure BSP keys or use fake.',

@@ -1,4 +1,11 @@
-import { joinApiUrl, parseJsonBody, socketOrigin, throwIfNotJson } from '../../../../packages/frontend-api.ts';
+import {
+  joinApiUrl,
+  normalizeHttpError,
+  parseJsonBody,
+  resilientFetch,
+  socketOrigin,
+  throwIfNotJson,
+} from '../../../../packages/frontend-api.ts';
 
 const ORDER_ACCESS_KEY = 'cafe-order-access';
 
@@ -23,8 +30,11 @@ function readAccessMap(): Record<string, string> {
 async function request<T>(path: string, init: RequestInit = {}, orderId?: string): Promise<T> {
   const { headers: initHeaders, ...rest } = init;
   const access = orderId ? getOrderAccess(orderId) : null;
-  const res = await fetch(joinApiUrl(path), {
+  const method = (rest.method ?? 'GET').toUpperCase();
+  const retries = method === 'GET' ? 2 : 0;
+  const res = await resilientFetch(joinApiUrl(path), {
     ...rest,
+    retries,
     headers: {
       ...(rest.body ? { 'Content-Type': 'application/json' } : {}),
       ...(access ? { 'X-Order-Access': access } : {}),
@@ -43,7 +53,7 @@ async function request<T>(path: string, init: RequestInit = {}, orderId?: string
     } catch {
       /* keep raw */
     }
-    throw new Error(message);
+    throw normalizeHttpError(res.status, message);
   }
   return parseJsonBody<T>(res, text);
 }

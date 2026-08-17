@@ -16,6 +16,7 @@ export type ParsedPaymentWebhook = {
 
 export interface PaymentGateway {
   readonly mode: 'fake' | 'live';
+  publicKeyId(): string;
   createCheckout(input: {
     orderId: string;
     amountPaise: number;

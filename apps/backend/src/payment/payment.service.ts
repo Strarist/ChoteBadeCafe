@@ -12,6 +12,8 @@ import type {
 } from '@cafe/shared-types';
 import { OrderService } from '../order/order.service';
 import { PAYMENT_GATEWAY, type PaymentGateway } from './payment-gateway.interface';
+import { isPaidKitchenStatus } from '../order/order-status';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class PaymentService {
@@ -20,6 +22,7 @@ export class PaymentService {
   constructor(
     @Inject(PAYMENT_GATEWAY) private readonly gateway: PaymentGateway,
     private readonly orders: OrderService,
+    private readonly config: ConfigService,
   ) {
     this.logger.log(`Payment gateway mode: ${gateway.mode}`);
   }
@@ -36,6 +39,9 @@ export class PaymentService {
     }
 
     const order = await this.orders.findById(orderId);
+    if (isPaidKitchenStatus(order.status) || order.paymentStatus === 'paid') {
+      throw new BadRequestException('This order is already paid.');
+    }
     if (order.status !== 'awaiting_payment') {
       throw new BadRequestException('Order is not awaiting payment');
     }
@@ -46,6 +52,15 @@ export class PaymentService {
       throw new BadRequestException(
         `Order total must be at least 100 paise (₹1). Got ${order.totalAmount}.`,
       );
+    }
+
+    const pending = order.payments.find((p) => p.status === 'pending');
+    if (pending?.gatewayOrderId) {
+      return this.clientPayload(orderId, pending.gatewayOrderId, pending.amount, order.token, {
+        name: order.customer.name,
+        email: order.customer.email,
+        mobile: order.customer.mobile,
+      });
     }
 
     const payload = await this.gateway.createCheckout({
@@ -75,24 +90,22 @@ export class PaymentService {
     }
 
     const order = await this.orders.findById(orderId);
-    if (order.status !== 'awaiting_payment' && order.paymentStatus !== 'paid') {
-      throw new BadRequestException('Order is not awaiting payment');
-    }
-    if (order.paymentStatus === 'paid') {
+    if (isPaidKitchenStatus(order.status) || order.paymentStatus === 'paid') {
       return order;
+    }
+    if (order.status !== 'awaiting_payment' && order.status !== 'payment_failed') {
+      throw new BadRequestException('Order is not awaiting payment');
     }
 
     const pending = order.payments.find((p) => p.status === 'pending');
-    if (!pending) {
-      throw new BadRequestException('No pending payment for this order');
-    }
-    if (pending.method === 'pay_at_counter') {
+    if (pending?.method === 'pay_at_counter') {
       throw new BadRequestException('This order is pay-at-counter; do not use Razorpay');
     }
-    if (pending.gatewayOrderId && pending.gatewayOrderId !== input.razorpayOrderId) {
+    if (pending?.gatewayOrderId && pending.gatewayOrderId !== input.razorpayOrderId) {
       throw new BadRequestException('Razorpay order id does not match this cafe order');
     }
-    if (!Number.isInteger(pending.amount) || pending.amount < 100) {
+    const amount = pending?.amount ?? order.totalAmount;
+    if (!Number.isInteger(amount) || amount < 100) {
       throw new BadRequestException('Invalid payment amount (minimum 100 paise)');
     }
 
@@ -100,7 +113,7 @@ export class PaymentService {
       throw new BadRequestException('Invalid Razorpay payment signature');
     }
 
-    return this.orders.markPaymentPaid(orderId, input.razorpayPaymentId, pending.method);
+    return this.orders.markPaymentPaid(orderId, input.razorpayPaymentId, pending?.method ?? 'upi');
   }
 
   /** Dev-only confirm when using FakePaymentGateway. */
@@ -135,12 +148,15 @@ export class PaymentService {
       }
 
       const order = await this.orders.findById(parsed.cafeOrderId);
+      if (isPaidKitchenStatus(order.status) || order.paymentStatus === 'paid') {
+        return { ok: true, orderId: parsed.cafeOrderId };
+      }
       const pending = order.payments.find((p) => p.status === 'pending');
       if (pending && typeof parsed.amountPaise === 'number' && parsed.amountPaise !== pending.amount) {
         this.logger.error(
           `Webhook amount mismatch for ${parsed.cafeOrderId}: got ${parsed.amountPaise}, expected ${pending.amount}`,
         );
-        throw new BadRequestException('Webhook amount does not match order payment');
+        return { ok: true, ignored: true, reason: 'amount_mismatch' };
       }
       if (
         pending?.gatewayOrderId &&
@@ -166,5 +182,35 @@ export class PaymentService {
     }
 
     return { ok: true, ignored: true };
+  }
+
+  private clientPayload(
+    orderId: string,
+    razorpayOrderId: string,
+    amountPaise: number,
+    receipt: string,
+    customer?: { name?: string; email?: string | null; mobile?: string },
+  ): RazorpayCheckoutPayload {
+    const name =
+      this.config.get<string>('RAZORPAY_CHECKOUT_NAME')?.trim() || 'Chote Bade Café';
+    const logo = this.config.get<string>('RAZORPAY_CHECKOUT_LOGO')?.trim() || undefined;
+    const themeColor =
+      this.config.get<string>('RAZORPAY_CHECKOUT_THEME_COLOR')?.trim() || undefined;
+    return {
+      orderId,
+      razorpayOrderId,
+      amount: amountPaise,
+      currency: 'INR',
+      keyId: this.gateway.publicKeyId(),
+      name,
+      description: `Order ${receipt}`,
+      ...(logo ? { logo } : {}),
+      ...(themeColor ? { themeColor } : {}),
+      prefill: {
+        ...(customer?.name ? { name: customer.name } : {}),
+        ...(customer?.email ? { email: customer.email } : {}),
+        ...(customer?.mobile ? { contact: customer.mobile } : {}),
+      },
+    };
   }
 }

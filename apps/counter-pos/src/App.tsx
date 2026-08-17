@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { io } from 'socket.io-client';
+import { io, type Socket } from 'socket.io-client';
 import type { MenuItem, OrderDetail, StaffLoginResponse } from '@cafe/shared-types';
 import { SOCKET_EVENTS } from '@cafe/shared-types';
 import { api, getAuthToken, setAuthToken } from './lib/api';
+import { loadMenuCache, saveMenuCache } from './lib/menuCache';
+import { useConnectionStatus } from './hooks/useConnectionStatus';
+import { ConnectionBanner } from './components/ConnectionBanner';
 import './index.css';
 
-type Tab = 'order' | 'pay' | 'ready' | 'push';
+type Tab = 'order' | 'pay' | 'kitchen' | 'ready' | 'push';
+type RealtimeState = 'live' | 'reconnecting' | 'offline';
 
 const STAFF_SESSION =
   localStorage.getItem('counter-staff-session') ??
@@ -38,6 +42,7 @@ export default function App() {
   const [customerName, setCustomerName] = useState('');
   const [customerMobile, setCustomerMobile] = useState('');
   const [pendingPay, setPendingPay] = useState<OrderDetail[]>([]);
+  const [kitchen, setKitchen] = useState<OrderDetail[]>([]);
   const [ready, setReady] = useState<OrderDetail[]>([]);
   const [pushFailed, setPushFailed] = useState<OrderDetail[]>([]);
   const [lastTicket, setLastTicket] = useState<OrderDetail | null>(null);
@@ -46,6 +51,20 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
   const [flashId, setFlashId] = useState<string | null>(null);
+  const [socketConnected, setSocketConnected] = useState(false);
+  const [queuesStale, setQueuesStale] = useState(false);
+  const [menuStale, setMenuStale] = useState(false);
+
+  const networkStatus = useConnectionStatus();
+  const realtimeState: RealtimeState =
+    networkStatus === 'offline' ? 'offline' : socketConnected ? 'live' : 'reconnecting';
+
+  const realtimeLabel =
+    realtimeState === 'live'
+      ? 'Live'
+      : realtimeState === 'offline'
+        ? 'Offline'
+        : 'Reconnecting…';
 
   const canCreateTicket =
     customerName.trim().length > 0 && customerMobile.trim().length >= 8 && cart.length > 0;
@@ -72,37 +91,97 @@ export default function App() {
   };
 
   const refreshQueues = useCallback(async () => {
-    const [pay, readyList, all] = await Promise.all([
-      api.get<OrderDetail[]>('/orders?status=awaiting_payment'),
-      api.get<OrderDetail[]>('/orders?status=ready_for_handover'),
-      api.get<OrderDetail[]>('/orders?status=confirmed'),
-    ]);
-    setPendingPay(pay.filter((o) => o.payments.some((p) => p.method === 'pay_at_counter')));
-    setReady(readyList);
-    setPushFailed(all.filter((o) => o.petpoojaPushFailed));
+    try {
+      const [pay, confirmed, preparing, readyList] = await Promise.all([
+        api.get<OrderDetail[]>('/orders?status=awaiting_payment'),
+        api.get<OrderDetail[]>('/orders?status=confirmed'),
+        api.get<OrderDetail[]>('/orders?status=preparing'),
+        api.get<OrderDetail[]>('/orders?status=ready_for_handover'),
+      ]);
+      setPendingPay(pay);
+      setKitchen([...preparing, ...confirmed]);
+      setReady(readyList);
+      setPushFailed(confirmed.filter((o) => o.petpoojaPushFailed));
+      setQueuesStale(false);
+    } catch (err) {
+      setQueuesStale(true);
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }, []);
+
+  const loadMenu = useCallback(async () => {
+    try {
+      const items = await api.get<MenuItem[]>('/menu');
+      setMenu(items);
+      saveMenuCache(items);
+      setMenuStale(false);
+    } catch (err) {
+      const cached = loadMenuCache<MenuItem>();
+      if (cached) {
+        setMenu(cached);
+        setMenuStale(true);
+      }
+      setError(err instanceof Error ? err.message : String(err));
+    }
   }, []);
 
   useEffect(() => {
     if (!getAuthToken() || !authedName) return;
-    void api.get<MenuItem[]>('/menu').then(setMenu).catch((e) => setError(String(e)));
+
+    void loadMenu();
     void refreshQueues();
-    const socket = io(api.url, { transports: ['websocket', 'polling'] });
-    const reload = () => void refreshQueues();
+
+    const socket: Socket = io(api.url, {
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 10000,
+    });
+
     const token = getAuthToken();
-    if (token) {
-      socket.emit(SOCKET_EVENTS.JOIN_STAFF, { token });
+    const joinStaff = () => {
+      if (token) socket.emit(SOCKET_EVENTS.JOIN_STAFF, { token });
+    };
+
+    const reload = () => void refreshQueues();
+
+    socket.on('connect', () => {
+      setSocketConnected(true);
+      joinStaff();
+      void refreshQueues();
+    });
+    socket.on('disconnect', () => setSocketConnected(false));
+    socket.on('connect_error', () => setSocketConnected(false));
+
+    if (socket.connected) {
+      setSocketConnected(true);
+      joinStaff();
     }
+
     socket.on(SOCKET_EVENTS.ORDER_CREATED, reload);
     socket.on(SOCKET_EVENTS.ORDER_STATUS_CHANGED, reload);
-    socket.on(SOCKET_EVENTS.MENU_UPDATED, () => {
-      void api.get<MenuItem[]>('/menu').then(setMenu);
-    });
+    socket.on(SOCKET_EVENTS.MENU_UPDATED, () => void loadMenu());
+
+    let disconnectedAt: number | null = socket.connected ? null : Date.now();
+    const pollFallback = window.setInterval(() => {
+      if (socket.connected) {
+        disconnectedAt = null;
+        return;
+      }
+      if (disconnectedAt === null) disconnectedAt = Date.now();
+      if (Date.now() - disconnectedAt >= 10_000) void refreshQueues();
+    }, 5000);
+
     const tick = window.setInterval(() => setNow(Date.now()), 30000);
+
     return () => {
       socket.disconnect();
+      setSocketConnected(false);
+      window.clearInterval(pollFallback);
       window.clearInterval(tick);
     };
-  }, [refreshQueues, authedName]);
+  }, [refreshQueues, loadMenu, authedName]);
 
   const categories = useMemo(() => {
     const map = new Map<string, MenuItem[]>();
@@ -209,9 +288,43 @@ export default function App() {
     }
   };
 
+  const markPreparing = async (orderId: string) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await api.post(`/orders/${orderId}/preparing`);
+      await refreshQueues();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const markReady = async (orderId: string) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await api.post(`/orders/${orderId}/ready`);
+      await refreshQueues();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const retryPush = async (orderId: string) => {
-    await api.post(`/petpooja/orders/${orderId}/retry-push`);
-    await refreshQueues();
+    setBusy(true);
+    setError(null);
+    try {
+      await api.post(`/petpooja/orders/${orderId}/retry-push`);
+      await refreshQueues();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
   };
 
   void now;
@@ -260,16 +373,19 @@ export default function App() {
 
   return (
     <div className="counter-shell">
+      <ConnectionBanner status={networkStatus} />
       <header className="counter-header">
         <div>
           <p className="eyebrow">Chote Bade · Counter · {authedName}</p>
           <h1>POS</h1>
+          <p className={`realtime-indicator realtime-${realtimeState}`}>{realtimeLabel}</p>
         </div>
         <nav className="tabs">
           {(
             [
               ['order', 'New order'],
-              ['pay', `Pay queue (${pendingPay.length})`],
+              ['pay', `Pay (${pendingPay.length})`],
+              ['kitchen', `Kitchen (${kitchen.length})`],
               ['ready', `Ready (${ready.length})`],
               ['push', `Push fails (${pushFailed.length})`],
             ] as const
@@ -300,6 +416,14 @@ export default function App() {
 
       {tab === 'order' && (
         <div className="order-grid">
+          {menuStale && (
+            <p className="stale-notice order-stale-notice">
+              Showing saved menu — prices may be outdated.{' '}
+              <button type="button" onClick={() => void loadMenu()}>
+                Refresh menu
+              </button>
+            </p>
+          )}
           <section className="menu-pane">
             {categories.map(([category, items]) => (
               <div key={category} className="category-block">
@@ -433,15 +557,36 @@ export default function App() {
 
       {tab === 'pay' && (
         <section className="queue-pane">
-          <h2>Pay at counter</h2>
+          <div className="queue-head">
+            <h2>Awaiting payment</h2>
+            <button type="button" className="refresh-btn" onClick={() => void refreshQueues()}>
+              Refresh
+            </button>
+          </div>
+          {queuesStale && (
+            <p className="stale-notice">Queue data may be outdated — tap Refresh when back online.</p>
+          )}
           <div className="ticket-grid">
-            {pendingPay.map((order) => (
+            {pendingPay.map((order) => {
+              const pendingMethod = order.payments.find((p) => p.status === 'pending')?.method;
+              return (
               <article key={order.id} className="ticket">
                 <header>
                   <strong>{order.token}</strong>
                   <span>{order.customer.name}</span>
                 </header>
                 <p>{formatPaise(order.totalAmount)}</p>
+                <p className="field-hint">
+                  {pendingMethod === 'pay_at_counter' ? 'Pay at counter' : `Online (${pendingMethod ?? 'upi'})`}
+                  {order.tableId ? ` · ${order.tableId}` : ''}
+                </p>
+                <ul>
+                  {order.items.map((i) => (
+                    <li key={i.id}>
+                      {i.quantity}× {i.menuItem.name}
+                    </li>
+                  ))}
+                </ul>
                 <div className="actions">
                   {(['cash', 'upi', 'card', 'qr'] as const).map((m) => (
                     <button
@@ -455,15 +600,77 @@ export default function App() {
                   ))}
                 </div>
               </article>
-            ))}
+              );
+            })}
             {!pendingPay.length && <p className="empty">No pending payments</p>}
+          </div>
+        </section>
+      )}
+
+      {tab === 'kitchen' && (
+        <section className="queue-pane">
+          <div className="queue-head">
+            <h2>Live tickets</h2>
+            <button type="button" className="refresh-btn" onClick={() => void refreshQueues()}>
+              Refresh
+            </button>
+          </div>
+          {queuesStale && (
+            <p className="stale-notice">Queue data may be outdated — tap Refresh when back online.</p>
+          )}
+          <div className="ticket-grid">
+            {kitchen.map((order) => (
+              <article key={order.id} className="ticket">
+                <header>
+                  <strong>{order.token}</strong>
+                  <span>{order.status === 'preparing' ? 'preparing' : 'new'}</span>
+                </header>
+                <p>{order.customer.name}</p>
+                {order.tableId && <p className="field-hint">{order.tableId}</p>}
+                <ul>
+                  {order.items.map((i) => (
+                    <li key={i.id}>
+                      {i.quantity}× {i.menuItem.name}
+                    </li>
+                  ))}
+                </ul>
+                <div className="actions">
+                  {order.status === 'confirmed' && (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void markPreparing(order.id)}
+                    >
+                      Preparing
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="primary"
+                    disabled={busy}
+                    onClick={() => void markReady(order.id)}
+                  >
+                    Ready
+                  </button>
+                </div>
+              </article>
+            ))}
+            {!kitchen.length && <p className="empty">No live tickets</p>}
           </div>
         </section>
       )}
 
       {tab === 'ready' && (
         <section className="queue-pane">
-          <h2>Ready for handover</h2>
+          <div className="queue-head">
+            <h2>Ready for handover</h2>
+            <button type="button" className="refresh-btn" onClick={() => void refreshQueues()}>
+              Refresh
+            </button>
+          </div>
+          {queuesStale && (
+            <p className="stale-notice">Queue data may be outdated — tap Refresh when back online.</p>
+          )}
           <div className="ticket-grid">
             {ready.map((order) => {
               const mins = waitMinutes(order.readyAt, order.createdAt);
@@ -497,7 +704,15 @@ export default function App() {
 
       {tab === 'push' && (
         <section className="queue-pane">
-          <h2>PetPooja push failures</h2>
+          <div className="queue-head">
+            <h2>PetPooja push failures</h2>
+            <button type="button" className="refresh-btn" onClick={() => void refreshQueues()}>
+              Refresh
+            </button>
+          </div>
+          {queuesStale && (
+            <p className="stale-notice">Queue data may be outdated — tap Refresh when back online.</p>
+          )}
           <div className="ticket-grid">
             {pushFailed.map((order) => (
               <article key={order.id} className="ticket stale">

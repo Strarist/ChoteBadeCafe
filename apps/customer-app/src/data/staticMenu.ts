@@ -3,6 +3,16 @@ import type { MenuItem as ApiMenuItem } from '@cafe/shared-types'
 /** Bundled menu — instant display while the API wakes (Render free tier). */
 export const staticMenu: ApiMenuItem[] = [
   {
+    id: 'pp-test-one-rupee',
+    petpoojaItemId: 'pp-test-one-rupee',
+    name: 'TEST CHECKOUT ₹1',
+    description: 'Mock item for payment testing. Do not serve.',
+    price: 100,
+    category: 'Test',
+    isAvailable: true,
+    syncedAt: null,
+  },
+  {
     id: 'pp-babas-espresso',
     petpoojaItemId: 'pp-babas-espresso',
     name: "BABA'S ESPRESSO",

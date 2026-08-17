@@ -1,7 +1,7 @@
 import {
   BadRequestException,
   Injectable,
-  InternalServerErrorException,
+  Logger,
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -20,8 +20,13 @@ const MIN_AMOUNT_PAISE = 100;
 @Injectable()
 export class RazorpayPaymentGateway implements PaymentGateway {
   readonly mode = 'live' as const;
+  private readonly logger = new Logger(RazorpayPaymentGateway.name);
 
   constructor(private readonly config: ConfigService) {}
+
+  publicKeyId(): string {
+    return this.require('RAZORPAY_KEY_ID');
+  }
 
   async createCheckout(input: {
     orderId: string;
@@ -53,13 +58,15 @@ export class RazorpayPaymentGateway implements PaymentGateway {
     });
 
     if (res.status === 401 || res.status === 403) {
-      throw new UnauthorizedException(
-        `Razorpay authentication failed (${res.status}). Check RAZORPAY_KEY_ID / KEY_SECRET.`,
+      this.logger.error(`Razorpay order create rejected (${res.status}) — check live keys`);
+      throw new ServiceUnavailableException(
+        'Online payment is temporarily unavailable. Please pay at the counter or try again.',
       );
     }
     if (!res.ok) {
-      throw new InternalServerErrorException(
-        `Razorpay order create failed (${res.status}): ${await res.text()}`,
+      this.logger.error(`Razorpay order create failed (${res.status}): ${await res.text()}`);
+      throw new ServiceUnavailableException(
+        'Online payment is temporarily unavailable. Please pay at the counter or try again.',
       );
     }
 
@@ -88,11 +95,11 @@ export class RazorpayPaymentGateway implements PaymentGateway {
   ): Promise<ParsedPaymentWebhook> {
     const secret = this.require('RAZORPAY_WEBHOOK_SECRET');
     if (!signature) {
-      throw new ServiceUnavailableException('Missing Razorpay signature');
+      throw new UnauthorizedException('Missing Razorpay signature');
     }
     const expected = createHmac('sha256', secret).update(rawBody).digest('hex');
     if (!timingSafeEqualUtf8(expected, signature)) {
-      throw new ServiceUnavailableException('Invalid Razorpay signature');
+      throw new UnauthorizedException('Invalid Razorpay signature');
     }
     return parseRazorpayWebhookPayload(rawBody);
   }
@@ -126,8 +133,9 @@ export class RazorpayPaymentGateway implements PaymentGateway {
   private require(key: string): string {
     const value = stripEnv(this.config.get<string>(key));
     if (!value || value === 'mock') {
+      this.logger.error(`${key} is missing or mock — refusing live Razorpay operation`);
       throw new ServiceUnavailableException(
-        `${key} is missing. Required for live Razorpay. Refusing payment operation.`,
+        'Online payment is temporarily unavailable. Please pay at the counter or try again.',
       );
     }
     return value;

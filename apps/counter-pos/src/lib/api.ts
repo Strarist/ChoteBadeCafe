@@ -1,4 +1,10 @@
-import { joinApiUrl, socketOrigin, throwIfNotJson } from '../../../../packages/frontend-api.ts';
+import {
+  joinApiUrl,
+  normalizeHttpError,
+  resilientFetch,
+  socketOrigin,
+  throwIfNotJson,
+} from '../../../../packages/frontend-api.ts';
 
 let authToken: string | null = localStorage.getItem('counter-auth-token');
 
@@ -14,8 +20,11 @@ export function getAuthToken() {
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const { headers: initHeaders, ...rest } = init;
-  const res = await fetch(joinApiUrl(path), {
+  const method = (rest.method ?? 'GET').toUpperCase();
+  const retries = method === 'GET' ? 2 : 0;
+  const res = await resilientFetch(joinApiUrl(path), {
     ...rest,
+    retries,
     headers: {
       ...(rest.body ? { 'Content-Type': 'application/json' } : {}),
       ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
@@ -34,7 +43,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     } catch {
       /* keep raw */
     }
-    throw new Error(message);
+    throw normalizeHttpError(res.status, message);
   }
   return res.json() as Promise<T>;
 }

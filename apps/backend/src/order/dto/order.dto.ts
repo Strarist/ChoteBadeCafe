@@ -5,6 +5,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  Max,
   Min,
   MinLength,
   ValidateNested,
@@ -18,6 +19,7 @@ export class OrderItemDto {
 
   @IsInt()
   @Min(1)
+  @Max(20)
   quantity!: number;
 
   @IsOptional()

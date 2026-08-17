@@ -13,6 +13,13 @@ const u = (id: string, w = 900) =>
 
 /** Presentation layer for menu items — Unsplash photos + short copy. */
 export const menuCatalog: Record<string, MenuCatalogEntry> = {
+  "test checkout ₹1": {
+    displayName: "Test Checkout ₹1",
+    description: "Mock item for payment testing. Do not serve.",
+    image: u("photo-1556742049-0cfed4f6a45d"),
+    imageAlt: "Payment test item",
+    tags: ["TEST"],
+  },
   "baba's espresso": {
     displayName: "Baba's Espresso",
     description: "Short, strong, no small talk.",

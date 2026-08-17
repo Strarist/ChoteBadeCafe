@@ -9,9 +9,12 @@ import { PageTransition } from "./PageTransition"
 import { getLenis, useSmoothScroll } from "../hooks/useSmoothScroll"
 import { prefetchMenu } from "../lib/menuCache"
 import { warmApi } from "../lib/warmApi"
+import { useConnectionStatus } from "../hooks/useConnectionStatus"
+import { ConnectionBanner } from "./ConnectionBanner"
 
 export function Layout() {
   const { pathname } = useLocation()
+  const connectionStatus = useConnectionStatus()
   useSmoothScroll()
 
   useEffect(() => {
@@ -43,6 +46,7 @@ export function Layout() {
 
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-transparent text-ink">
+      <ConnectionBanner status={connectionStatus} />
       <div className="pointer-events-none fixed inset-0 -z-10 grain" aria-hidden />
       <div
         className="pointer-events-none fixed inset-x-0 top-0 -z-10 h-[70vh] bg-gradient-to-b from-cream-warm/80 via-transparent to-transparent"

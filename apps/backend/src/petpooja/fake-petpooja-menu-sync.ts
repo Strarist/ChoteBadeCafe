@@ -10,6 +10,7 @@ import type { PetPoojaMenuSync } from './petpooja-menu-sync.interface';
 export class FakePetPoojaMenuSync implements PetPoojaMenuSync {
   async pull(): Promise<Array<Omit<MenuItem, 'id' | 'syncedAt'>>> {
     return [
+      { petpoojaItemId: 'pp-test-one-rupee', name: 'TEST CHECKOUT ₹1', description: 'Mock item for payment testing. Do not serve.', price: 100, category: 'Test', isAvailable: true },
       { petpoojaItemId: 'pp-babas-espresso', name: "BABA'S ESPRESSO", description: null, price: 16000, category: 'Coffee', isAvailable: true },
       { petpoojaItemId: 'pp-americano', name: 'AMERICANO', description: null, price: 18000, category: 'Coffee', isAvailable: true },
       { petpoojaItemId: 'pp-cortado', name: 'CORTADO', description: null, price: 19000, category: 'Coffee', isAvailable: true },
