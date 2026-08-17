@@ -23,6 +23,11 @@ export class OrderItemDto {
   @IsOptional()
   @IsString()
   instructions?: string | null;
+
+  /** Display/API name — used to recover if a stale cart id no longer exists. */
+  @IsOptional()
+  @IsString()
+  name?: string | null;
 }
 
 export class CustomerDto {

@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  InternalServerErrorException,
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -57,7 +58,7 @@ export class RazorpayPaymentGateway implements PaymentGateway {
       );
     }
     if (!res.ok) {
-      throw new ServiceUnavailableException(
+      throw new InternalServerErrorException(
         `Razorpay order create failed (${res.status}): ${await res.text()}`,
       );
     }
@@ -123,7 +124,7 @@ export class RazorpayPaymentGateway implements PaymentGateway {
   }
 
   private require(key: string): string {
-    const value = this.config.get<string>(key);
+    const value = stripEnv(this.config.get<string>(key));
     if (!value || value === 'mock') {
       throw new ServiceUnavailableException(
         `${key} is missing. Required for live Razorpay. Refusing payment operation.`,
@@ -138,4 +139,8 @@ function timingSafeEqualUtf8(a: string, b: string): boolean {
   const bufB = Buffer.from(b);
   if (bufA.length !== bufB.length) return false;
   return timingSafeEqual(bufA, bufB);
+}
+
+function stripEnv(value: string | undefined): string {
+  return (value ?? '').trim().replace(/^["']|["']$/g, '');
 }

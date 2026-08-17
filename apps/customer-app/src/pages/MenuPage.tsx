@@ -280,7 +280,7 @@ export function MenuPage() {
   const [justAdded, setJustAdded] = useState<string | null>(null)
   const [loading, setLoading] = useState(!cached)
   const [error, setError] = useState<string | null>(null)
-  const { addItem, increment, decrement, items } = useCart()
+  const { addItem, increment, decrement, items, keepOnlyMenuIds } = useCart()
 
   useEffect(() => {
     let cancelled = false
@@ -291,6 +291,7 @@ export function MenuPage() {
         const data = await fetchMenu()
         if (!cancelled) {
           setSections(toSections(data))
+          if (data.length) keepOnlyMenuIds(data.map((item) => item.id))
           setError(null)
         }
       } catch (err) {
@@ -306,7 +307,7 @@ export function MenuPage() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [keepOnlyMenuIds])
 
   const filters = useMemo(
     () => [{ id: "all", label: "All" }, ...sections.map((s) => ({ id: s.id, label: s.title }))],

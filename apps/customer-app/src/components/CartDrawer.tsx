@@ -49,7 +49,8 @@ export function CartDrawer() {
         if (!result.available) setPayMethod("pay_at_counter")
       })
       .catch(() => {
-        /* stay on pay-at-counter until the API confirms online pay */
+        /* endpoint missing / API asleep — still offer Pay online; server will refuse if disabled */
+        setOnlinePay(true)
       })
   }, [])
 
@@ -88,6 +89,7 @@ export function CartDrawer() {
         },
         items: items.map((item) => ({
           menuItemId: item.id,
+          name: item.name,
           quantity: item.quantity,
           instructions: item.instructions || null,
         })),

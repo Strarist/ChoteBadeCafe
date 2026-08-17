@@ -37,10 +37,11 @@ type CartContextValue = {
   tableId: string | null
   setTableId: (id: string | null) => void
   setItemInstructions: (id: string, instructions: string) => void
+  keepOnlyMenuIds: (ids: string[]) => void
 }
 
 const CartContext = createContext<CartContextValue | null>(null)
-const STORAGE_KEY = "chote-bade-table"
+const STORAGE_KEY = "chote-bade-cart-v2"
 const TABLE_KEY = "chote-bade-table-id"
 
 function loadItems(): CartItem[] {
@@ -126,6 +127,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     )
   }, [])
 
+  const keepOnlyMenuIds = useCallback((ids: string[]) => {
+    const allowed = new Set(ids)
+    setItems((prev) => prev.filter((item) => allowed.has(item.id)))
+  }, [])
+
   const itemCount = useMemo(
     () => items.reduce((sum, item) => sum + item.quantity, 0),
     [items],
@@ -154,6 +160,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       tableId,
       setTableId,
       setItemInstructions,
+      keepOnlyMenuIds,
     }),
     [
       items,
@@ -172,6 +179,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       tableId,
       setTableId,
       setItemInstructions,
+      keepOnlyMenuIds,
     ],
   )
 

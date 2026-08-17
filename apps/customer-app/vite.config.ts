@@ -22,11 +22,19 @@ export default defineConfig({
       workbox: {
         navigateFallback: 'index.html',
         navigateFallbackDenylist: [
+          /^\/api(?:\/|$)/,
           /^\/privacy(?:\.html)?\/?$/,
           /^\/terms(?:\.html)?\/?$/,
           /^\/refunds(?:\.html)?\/?$/,
           /^\/shipping(?:\.html)?\/?$/,
           /^\/contact(?:\.html)?\/?$/,
+        ],
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }: { url: URL }) =>
+              url.pathname.startsWith('/api') || url.pathname.startsWith('/payments') || url.pathname.startsWith('/menu') || url.pathname.startsWith('/orders'),
+            handler: 'NetworkOnly',
+          },
         ],
       },
       manifest: {

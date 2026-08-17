@@ -93,11 +93,13 @@ export class IntegrationsConfigService implements OnModuleInit {
   }
 
   paymentMode(): AdapterMode {
-    const legacy = this.config.get<string>('RAZORPAY_KEY_ID');
+    // Real Razorpay keys win over a leftover PAYMENT_ADAPTER=fake from first deploy.
+    if (this.hasRazorpayCredentials() && process.env.ALLOW_FAKE_PAYMENTS !== '1') {
+      return 'live';
+    }
     const explicit = this.config.get<string>('PAYMENT_ADAPTER');
     if (explicit === 'live' || explicit === 'fake') return explicit;
-    if (!legacy || legacy === 'mock') return 'fake';
-    return 'live';
+    return 'fake';
   }
 
   notificationMode(): AdapterMode {
@@ -118,14 +120,9 @@ export class IntegrationsConfigService implements OnModuleInit {
   }
 
   hasRazorpayCredentials(): boolean {
-    const keyId = this.config.get<string>('RAZORPAY_KEY_ID');
-    const keySecret = this.config.get<string>('RAZORPAY_KEY_SECRET');
-    return Boolean(
-      keyId &&
-        keyId !== 'mock' &&
-        keySecret &&
-        keySecret !== 'mock',
-    );
+    const keyId = stripEnv(this.config.get<string>('RAZORPAY_KEY_ID'));
+    const keySecret = stripEnv(this.config.get<string>('RAZORPAY_KEY_SECRET'));
+    return Boolean(keyId && keyId !== 'mock' && keySecret && keySecret !== 'mock');
   }
 
   hasNotificationCredentials(): boolean {
@@ -205,4 +202,8 @@ export class IntegrationsConfigService implements OnModuleInit {
     }
     return { adapter: mode, status: 'ready_live', detail, hasCredentials };
   }
+}
+
+function stripEnv(value: string | undefined): string {
+  return (value ?? '').trim().replace(/^["']|["']$/g, '');
 }

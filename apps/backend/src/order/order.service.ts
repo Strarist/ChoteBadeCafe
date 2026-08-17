@@ -58,19 +58,19 @@ export class OrderService {
   async create(input: {
     source: OrderSource;
     customer: { name: string; mobile: string; email?: string | null };
-    items: Array<{ menuItemId: string; quantity: number; instructions?: string | null }>;
+    items: Array<{
+      menuItemId: string;
+      quantity: number;
+      instructions?: string | null;
+      name?: string | null;
+    }>;
     tableId?: string | null;
   }): Promise<OrderDetail> {
     if (!input.items.length) {
       throw new BadRequestException('Order must include at least one item');
     }
 
-    const menuItems = await this.prisma.menuItem.findMany({
-      where: { id: { in: input.items.map((i) => i.menuItemId) }, isAvailable: true },
-    });
-    if (menuItems.length !== input.items.length) {
-      throw new BadRequestException('One or more menu items are unavailable');
-    }
+    const resolved = await this.resolveAvailableItems(input.items);
 
     const token = await this.tokens.nextToken();
     const customer = await this.prisma.customer.create({
@@ -96,7 +96,7 @@ export class OrderService {
         customerId: customer.id,
         tableId: input.tableId ?? null,
         items: {
-          create: input.items.map((item) => ({
+          create: resolved.map((item) => ({
             menuItemId: item.menuItemId,
             quantity: item.quantity,
             instructions: item.instructions ?? null,
@@ -146,7 +146,12 @@ export class OrderService {
 
   async replaceItems(
     orderId: string,
-    items: Array<{ menuItemId: string; quantity: number; instructions?: string | null }>,
+    items: Array<{
+      menuItemId: string;
+      quantity: number;
+      instructions?: string | null;
+      name?: string | null;
+    }>,
   ): Promise<OrderDetail> {
     const order = await this.requireOrder(orderId);
     if (order.status !== 'cart_building' && order.status !== 'payment_failed') {
@@ -154,17 +159,12 @@ export class OrderService {
     }
     if (!items.length) throw new BadRequestException('Order must include at least one item');
 
-    const menuItems = await this.prisma.menuItem.findMany({
-      where: { id: { in: items.map((i) => i.menuItemId) }, isAvailable: true },
-    });
-    if (menuItems.length !== items.length) {
-      throw new BadRequestException('One or more menu items are unavailable');
-    }
+    const resolved = await this.resolveAvailableItems(items);
 
     await this.prisma.$transaction([
       this.prisma.orderItem.deleteMany({ where: { orderId } }),
       this.prisma.orderItem.createMany({
-        data: items.map((item) => ({
+        data: resolved.map((item) => ({
           orderId,
           menuItemId: item.menuItemId,
           quantity: item.quantity,
@@ -467,6 +467,49 @@ export class OrderService {
   async totalPaise(orderId: string): Promise<number> {
     const detail = await this.findById(orderId);
     return detail.totalAmount;
+  }
+
+  private async resolveAvailableItems(
+    items: Array<{
+      menuItemId: string;
+      quantity: number;
+      instructions?: string | null;
+      name?: string | null;
+    }>,
+  ) {
+    const uniqueIds = [...new Set(items.map((item) => item.menuItemId))];
+    const byId = await this.prisma.menuItem.findMany({
+      where: { id: { in: uniqueIds }, isAvailable: true },
+    });
+    const found = new Map(byId.map((item) => [item.id, item]));
+    const missing: string[] = [];
+
+    for (const item of items) {
+      if (found.has(item.menuItemId)) continue;
+      const label = item.name?.trim();
+      if (label) {
+        const named = await this.prisma.menuItem.findFirst({
+          where: { isAvailable: true, name: { equals: label, mode: 'insensitive' } },
+        });
+        if (named) {
+          found.set(item.menuItemId, named);
+          continue;
+        }
+      }
+      missing.push(label || item.menuItemId);
+    }
+
+    if (missing.length) {
+      throw new BadRequestException(
+        `One or more menu items are unavailable (${missing.join(', ')}). Clear the cart and add them again from the menu.`,
+      );
+    }
+
+    return items.map((item) => ({
+      menuItemId: found.get(item.menuItemId)!.id,
+      quantity: item.quantity,
+      instructions: item.instructions ?? null,
+    }));
   }
 
   private async requireOrder(id: string) {
