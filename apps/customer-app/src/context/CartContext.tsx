@@ -7,10 +7,14 @@ import {
   useState,
   type ReactNode,
 } from "react"
+import type { MenuItem as ApiMenuItem } from "@cafe/shared-types"
+import { getCatalogEntry } from "../data/menuCatalog"
 
 export type CartItem = {
   id: string
   name: string
+  /** Kitchen-system name — sent on order for id/name fallback resolution. */
+  apiName?: string
   /** Price in rupees for display (converted from paise at add time). */
   price: number
   note?: string
@@ -37,7 +41,7 @@ type CartContextValue = {
   tableId: string | null
   setTableId: (id: string | null) => void
   setItemInstructions: (id: string, instructions: string) => void
-  keepOnlyMenuIds: (ids: string[]) => void
+  syncCartWithMenu: (menuItems: ApiMenuItem[]) => void
 }
 
 const CartContext = createContext<CartContextValue | null>(null)
@@ -127,9 +131,38 @@ export function CartProvider({ children }: { children: ReactNode }) {
     )
   }, [])
 
-  const keepOnlyMenuIds = useCallback((ids: string[]) => {
-    const allowed = new Set(ids)
-    setItems((prev) => prev.filter((item) => allowed.has(item.id)))
+  const syncCartWithMenu = useCallback((menuItems: ApiMenuItem[]) => {
+    const byId = new Map(menuItems.map((item) => [item.id, item]))
+    const resolveMenuItem = (cartItem: CartItem) => {
+      const direct = byId.get(cartItem.id)
+      if (direct) return direct
+      const label = cartItem.apiName ?? cartItem.name
+      for (const menuItem of menuItems) {
+        const catalog = getCatalogEntry(menuItem.name)
+        if (
+          menuItem.name.localeCompare(label, undefined, { sensitivity: 'base' }) === 0 ||
+          catalog.displayName === cartItem.name
+        ) {
+          return menuItem
+        }
+      }
+      return null
+    }
+
+    setItems((prev) => {
+      const next: CartItem[] = []
+      for (const item of prev) {
+        const menuItem = resolveMenuItem(item)
+        if (!menuItem) continue
+        next.push({
+          ...item,
+          id: menuItem.id,
+          apiName: menuItem.name,
+          price: Math.round(menuItem.price / 100),
+        })
+      }
+      return next
+    })
   }, [])
 
   const itemCount = useMemo(
@@ -160,7 +193,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       tableId,
       setTableId,
       setItemInstructions,
-      keepOnlyMenuIds,
+      syncCartWithMenu,
     }),
     [
       items,
@@ -179,7 +212,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       tableId,
       setTableId,
       setItemInstructions,
-      keepOnlyMenuIds,
+      syncCartWithMenu,
     ],
   )
 

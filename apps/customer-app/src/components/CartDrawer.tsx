@@ -42,6 +42,7 @@ export function CartDrawer() {
   const canConfirm = name.trim().length > 0 && mobile.trim().length >= 8
 
   useEffect(() => {
+    if (!isOpen) return
     void api
       .get<{ available: boolean }>("/payments/online")
       .then((result) => {
@@ -49,10 +50,11 @@ export function CartDrawer() {
         if (!result.available) setPayMethod("pay_at_counter")
       })
       .catch(() => {
-        /* endpoint missing / API asleep — still offer Pay online; server will refuse if disabled */
-        setOnlinePay(true)
+        /* API unreachable — stay on counter until we can confirm online pay */
+        setOnlinePay(false)
+        setPayMethod("pay_at_counter")
       })
-  }, [])
+  }, [isOpen])
 
   useEffect(() => {
     if (!isOpen) {
@@ -89,7 +91,7 @@ export function CartDrawer() {
         },
         items: items.map((item) => ({
           menuItemId: item.id,
-          name: item.name,
+          name: item.apiName ?? item.name,
           quantity: item.quantity,
           instructions: item.instructions || null,
         })),

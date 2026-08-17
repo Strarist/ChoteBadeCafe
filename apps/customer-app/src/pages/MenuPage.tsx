@@ -6,7 +6,7 @@ import { getCatalogEntry } from "../data/menuCatalog"
 import { Appear, EmergeLine, PageIntro } from "../components/MotionText"
 import { Reveal } from "../components/Reveal"
 import { useCart } from "../context/CartContext"
-import { fetchMenu, peekMenuCache } from "../lib/menuCache"
+import { fetchMenu, peekMenuCache, peekMenuFallback } from "../lib/menuCache"
 
 type MenuView = "photos" | "whole"
 
@@ -270,28 +270,26 @@ function WholeMenu({
 }
 
 export function MenuPage() {
-  const cached = peekMenuCache()
-  const [sections, setSections] = useState<MenuSection[]>(() =>
-    cached ? toSections(cached) : [],
-  )
+  const initialMenu = peekMenuCache() ?? peekMenuFallback()
+  const [sections, setSections] = useState<MenuSection[]>(() => toSections(initialMenu))
   const [filter, setFilter] = useState<string>("all")
   const [view, setView] = useState<MenuView>("photos")
   const [filterVisible, setFilterVisible] = useState(true)
   const [justAdded, setJustAdded] = useState<string | null>(null)
-  const [loading, setLoading] = useState(!cached)
+  const [refreshing, setRefreshing] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const { addItem, increment, decrement, items, keepOnlyMenuIds } = useCart()
+  const { addItem, increment, decrement, items, syncCartWithMenu } = useCart()
 
   useEffect(() => {
     let cancelled = false
 
     async function loadMenu() {
-      if (!peekMenuCache()) setLoading(true)
+      setRefreshing(true)
       try {
-        const data = await fetchMenu()
+        const data = await fetchMenu(true)
         if (!cancelled) {
           setSections(toSections(data))
-          if (data.length) keepOnlyMenuIds(data.map((item) => item.id))
+          if (data.length) syncCartWithMenu(data)
           setError(null)
         }
       } catch (err) {
@@ -299,7 +297,7 @@ export function MenuPage() {
           setError(err instanceof Error ? err.message : String(err))
         }
       } finally {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) setRefreshing(false)
       }
     }
 
@@ -307,7 +305,7 @@ export function MenuPage() {
     return () => {
       cancelled = true
     }
-  }, [keepOnlyMenuIds])
+  }, [syncCartWithMenu])
 
   const filters = useMemo(
     () => [{ id: "all", label: "All" }, ...sections.map((s) => ({ id: s.id, label: s.title }))],
@@ -334,6 +332,7 @@ export function MenuPage() {
     addItem({
       id: item.id,
       name: item.displayName,
+      apiName: item.name,
       price: item.price,
       note: item.note,
       sectionId,
@@ -430,13 +429,22 @@ export function MenuPage() {
 
       <section className="relative px-4 pb-28 pt-6 sm:px-5 md:px-8 md:pb-32 md:pt-8">
         <div className="relative mx-auto max-w-[1180px]">
-          {loading && <p className="text-sm text-ink-muted">Loading the menu…</p>}
-          {error && (
+          {refreshing && (
+            <p className="mb-4 text-xs text-ink-muted" aria-live="polite">
+              Refreshing live prices…
+            </p>
+          )}
+          {error && sections.length === 0 && (
             <p className="text-sm text-burgundy">
               Could not load menu from the kitchen system: {error}
             </p>
           )}
-          {!loading && !error && sections.length === 0 && (
+          {error && sections.length > 0 && (
+            <p className="mb-4 text-xs text-burgundy">
+              Could not refresh prices — showing last saved menu. {error}
+            </p>
+          )}
+          {!refreshing && !error && sections.length === 0 && (
             <p className="text-sm text-ink-muted">
               The menu is empty right now. Ask the kitchen to run a menu sync, or seed the database.
             </p>

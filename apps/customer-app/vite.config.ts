@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import type { HtmlTagDescriptor, Plugin } from 'vite';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
@@ -10,9 +11,37 @@ import { legalPagesPlugin } from './legal-pages';
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 
+/** Start waking the API before the JS bundle loads (Render free-tier cold start). */
+function apiWarmupPlugin(): Plugin {
+  return {
+    name: 'api-warmup',
+    transformIndexHtml() {
+      const apiBase = (process.env.VITE_API_URL ?? '/api').trim().replace(/\/+$/, '') || '/api';
+      const tags: HtmlTagDescriptor[] = [];
+      if (/^https?:\/\//i.test(apiBase)) {
+        try {
+          tags.push({
+            tag: 'link',
+            attrs: { rel: 'preconnect', href: new URL(apiBase).origin, crossorigin: true },
+          });
+        } catch {
+          /* skip invalid build-time API URL */
+        }
+      }
+      tags.push({
+        tag: 'script',
+        injectTo: 'head-prepend',
+        children: `try{fetch(${JSON.stringify(`${apiBase}/ping`)},{cache:'no-store'}).catch(function(){})}catch(e){}`,
+      });
+      return tags;
+    },
+  };
+}
+
 export default defineConfig({
   base: process.env.VITE_BASE ?? '/',
   plugins: [
+    apiWarmupPlugin(),
     react(),
     tailwindcss(),
     legalPagesPlugin(),
@@ -32,7 +61,9 @@ export default defineConfig({
         runtimeCaching: [
           {
             urlPattern: ({ url }: { url: URL }) =>
-              url.pathname.startsWith('/api') || url.pathname.startsWith('/payments') || url.pathname.startsWith('/menu') || url.pathname.startsWith('/orders'),
+              url.pathname.startsWith('/api') ||
+              url.pathname.startsWith('/payments') ||
+              url.pathname.startsWith('/orders'),
             handler: 'NetworkOnly',
           },
         ],
