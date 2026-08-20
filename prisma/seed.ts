@@ -52,10 +52,14 @@ async function main() {
     console.log('Menu already present — skipping item insert');
   }
 
-  // Remove ₹1 test item if it exists from older seed runs.
-  await prisma.menuItem.deleteMany({
+  // Retire ₹1 test item from older seed runs — hide from menu but keep row for order history.
+  const retiredTest = await prisma.menuItem.updateMany({
     where: { petpoojaItemId: 'pp-test-one-rupee' },
+    data: { isAvailable: false, syncedAt: now },
   });
+  if (retiredTest.count > 0) {
+    console.log(`Retired ${retiredTest.count} ₹1 test checkout item(s) from menu`);
+  }
 
   const staffCountBefore = await prisma.staffUser.count();
   const bootstrapPin = process.env.BOOTSTRAP_ADMIN_PIN?.trim();
