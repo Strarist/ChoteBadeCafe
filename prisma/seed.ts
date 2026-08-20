@@ -5,7 +5,6 @@ const prisma = new PrismaClient();
 
 /** Design-demo menu (rupees → paise). Matches the Chote Bade brand site. */
 const PLACEHOLDER_ITEMS = [
-  { petpoojaItemId: 'pp-test-one-rupee', name: 'TEST CHECKOUT ₹1', description: 'Mock item for payment testing. Do not serve.', price: 100, category: 'Test', isAvailable: true },
   { petpoojaItemId: 'pp-babas-espresso', name: "BABA'S ESPRESSO", description: 'Short, strong, no small talk.', price: 16000, category: 'Coffee', isAvailable: true },
   { petpoojaItemId: 'pp-americano', name: 'AMERICANO', description: 'Long black, quietly certain.', price: 18000, category: 'Coffee', isAvailable: true },
   { petpoojaItemId: 'pp-cortado', name: 'CORTADO', description: 'Equal parts heat and hush.', price: 19000, category: 'Coffee', isAvailable: true },
@@ -51,18 +50,12 @@ async function main() {
     }
   } else {
     console.log('Menu already present — skipping item insert');
-    const testCheckout = PLACEHOLDER_ITEMS.find((item) => item.petpoojaItemId === 'pp-test-one-rupee');
-    if (testCheckout) {
-      const existingTest = await prisma.menuItem.findFirst({
-        where: { petpoojaItemId: testCheckout.petpoojaItemId },
-      });
-      if (!existingTest) {
-        await prisma.menuItem.create({
-          data: { ...testCheckout, syncedAt: now },
-        });
-      }
-    }
   }
+
+  // Remove ₹1 test item if it exists from older seed runs.
+  await prisma.menuItem.deleteMany({
+    where: { petpoojaItemId: 'pp-test-one-rupee' },
+  });
 
   const staffCountBefore = await prisma.staffUser.count();
   const bootstrapPin = process.env.BOOTSTRAP_ADMIN_PIN?.trim();

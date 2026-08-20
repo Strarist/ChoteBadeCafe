@@ -11,14 +11,6 @@ export class FakePetPoojaMenuSync implements PetPoojaMenuSync {
   pull(): Promise<Array<Omit<MenuItem, 'id' | 'syncedAt'>>> {
     return Promise.resolve([
       {
-        petpoojaItemId: 'pp-test-one-rupee',
-        name: 'TEST CHECKOUT ₹1',
-        description: 'Mock item for payment testing. Do not serve.',
-        price: 100,
-        category: 'Test',
-        isAvailable: true,
-      },
-      {
         petpoojaItemId: 'pp-babas-espresso',
         name: "BABA'S ESPRESSO",
         description: null,
