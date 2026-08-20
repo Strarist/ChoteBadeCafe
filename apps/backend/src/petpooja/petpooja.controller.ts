@@ -43,7 +43,11 @@ export class PetPoojaController {
   ): Promise<OrderDetail> {
     const raw =
       req.rawBody ??
-      Buffer.from(typeof req.body === 'string' ? req.body : JSON.stringify(req.body ?? {}));
+      Buffer.from(
+        typeof req.body === 'string'
+          ? req.body
+          : JSON.stringify(req.body ?? {}),
+      );
     try {
       this.webhooks.verifySignature(raw, signature);
     } catch (err) {
@@ -61,12 +65,20 @@ export class PetPoojaController {
     body: {
       source: 'swiggy' | 'zomato';
       customer: { name: string; mobile: string };
-      items: Array<{ menuItemId: string; quantity: number; instructions?: string }>;
+      items: Array<{
+        menuItemId: string;
+        quantity: number;
+        instructions?: string;
+      }>;
     },
   ): Promise<OrderDetail> {
     const raw =
       req.rawBody ??
-      Buffer.from(typeof req.body === 'string' ? req.body : JSON.stringify(req.body ?? {}));
+      Buffer.from(
+        typeof req.body === 'string'
+          ? req.body
+          : JSON.stringify(req.body ?? {}),
+      );
     this.webhooks.verifySignature(raw, signature);
     return this.webhooks.handleAggregatorOrder(body);
   }

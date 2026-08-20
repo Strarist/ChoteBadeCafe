@@ -1,9 +1,14 @@
-import { mapRazorpayMethod, type ParsedPaymentWebhook } from './payment-gateway.interface';
+import {
+  mapRazorpayMethod,
+  type ParsedPaymentWebhook,
+} from './payment-gateway.interface';
 
 type RazorpayNotes = { cafe_order_id?: string };
 
 /** Shared parser for live + fake webhook payloads. */
-export function parseRazorpayWebhookPayload(rawBody: Buffer): ParsedPaymentWebhook {
+export function parseRazorpayWebhookPayload(
+  rawBody: Buffer,
+): ParsedPaymentWebhook {
   const payload = JSON.parse(rawBody.toString('utf8')) as {
     event?: string;
     payload?: {

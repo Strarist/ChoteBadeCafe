@@ -20,7 +20,10 @@ export class InMemoryRateLimit {
     }
     existing.count += 1;
     if (existing.count > this.max) {
-      throw new HttpException('Too many requests — try again later', HttpStatus.TOO_MANY_REQUESTS);
+      throw new HttpException(
+        'Too many requests — try again later',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
     }
   }
 }

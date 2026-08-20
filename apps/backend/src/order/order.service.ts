@@ -12,9 +12,7 @@ import type {
   PaymentMethod,
 } from '@cafe/shared-types';
 import {
-  OrderStatus as PrismaOrderStatus,
   OrderStatusLogSource as PrismaLogSource,
-  PaymentMethod as PrismaPaymentMethod,
   PaymentRecordStatus,
   PaymentStatus,
   Prisma,
@@ -72,7 +70,9 @@ export class OrderService {
     });
 
     const initialStatus: OrderStatus =
-      input.source === 'swiggy' || input.source === 'zomato' ? 'confirmed' : 'cart_building';
+      input.source === 'swiggy' || input.source === 'zomato'
+        ? 'confirmed'
+        : 'cart_building';
 
     const order = await this.prisma.order.create({
       data: {
@@ -147,7 +147,8 @@ export class OrderService {
     if (order.status !== 'cart_building' && order.status !== 'payment_failed') {
       throw new BadRequestException('Items can only be changed before payment');
     }
-    if (!items.length) throw new BadRequestException('Order must include at least one item');
+    if (!items.length)
+      throw new BadRequestException('Order must include at least one item');
 
     const resolved = await this.resolveAvailableItems(items);
 
@@ -172,7 +173,9 @@ export class OrderService {
   ): Promise<OrderDetail> {
     const order = await this.requireOrder(orderId);
     if (order.status !== 'cart_building' && order.status !== 'payment_failed') {
-      throw new BadRequestException('Customer details can only be changed before payment');
+      throw new BadRequestException(
+        'Customer details can only be changed before payment',
+      );
     }
     await this.prisma.customer.update({
       where: { id: order.customerId },
@@ -185,10 +188,7 @@ export class OrderService {
     return this.findById(orderId);
   }
 
-  async checkout(
-    orderId: string,
-    method: PaymentMethod,
-  ): Promise<OrderDetail> {
+  async checkout(orderId: string, method: PaymentMethod): Promise<OrderDetail> {
     const order = await this.findById(orderId);
     if (isPaidKitchenStatus(order.status)) {
       return order;
@@ -201,7 +201,9 @@ export class OrderService {
       );
     }
     if (order.status !== 'cart_building' && order.status !== 'payment_failed') {
-      throw new BadRequestException(`Cannot checkout from status ${order.status}`);
+      throw new BadRequestException(
+        `Cannot checkout from status ${order.status}`,
+      );
     }
     if (!order.items.length) throw new BadRequestException('Cart is empty');
 
@@ -231,13 +233,18 @@ export class OrderService {
     if (isPaidKitchenStatus(order.status) || order.paymentStatus === 'paid') {
       return order;
     }
-    if (order.status !== 'awaiting_payment' && order.status !== 'payment_failed') {
+    if (
+      order.status !== 'awaiting_payment' &&
+      order.status !== 'payment_failed'
+    ) {
       throw new BadRequestException('Order is not awaiting payment');
     }
 
     const pending = order.payments.find((p) => p.status === 'pending');
     if (!pending) {
-      throw new BadRequestException('No pending payment to collect at the counter');
+      throw new BadRequestException(
+        'No pending payment to collect at the counter',
+      );
     }
 
     await this.prisma.payment.update({
@@ -253,18 +260,30 @@ export class OrderService {
       data: { paymentStatus: PaymentStatus.paid },
     });
 
-    return this.transition(orderId, 'confirmed', staffUserId ? 'staff' : 'system', staffUserId);
+    return this.transition(
+      orderId,
+      'confirmed',
+      staffUserId ? 'staff' : 'system',
+      staffUserId,
+    );
   }
 
   /** Persist Razorpay order id on the pending payment row (idempotent). */
-  async attachGatewayOrderId(orderId: string, gatewayOrderId: string): Promise<void> {
+  async attachGatewayOrderId(
+    orderId: string,
+    gatewayOrderId: string,
+  ): Promise<void> {
     const order = await this.findById(orderId);
     const pending = order.payments.find((p) => p.status === 'pending');
     if (!pending) {
-      throw new BadRequestException('No pending payment to attach gateway order id');
+      throw new BadRequestException(
+        'No pending payment to attach gateway order id',
+      );
     }
     if (pending.gatewayOrderId && pending.gatewayOrderId !== gatewayOrderId) {
-      throw new BadRequestException('Payment already linked to a different Razorpay order');
+      throw new BadRequestException(
+        'Payment already linked to a different Razorpay order',
+      );
     }
     if (pending.gatewayOrderId === gatewayOrderId) return;
     await this.prisma.payment.update({
@@ -301,7 +320,9 @@ export class OrderService {
     gatewayRef: string,
     method: PaymentMethod = 'upi',
   ): Promise<OrderDetail> {
-    const existing = await this.prisma.payment.findUnique({ where: { gatewayRef } });
+    const existing = await this.prisma.payment.findUnique({
+      where: { gatewayRef },
+    });
     if (existing?.status === PaymentRecordStatus.success) {
       return this.findById(orderId);
     }
@@ -353,24 +374,27 @@ export class OrderService {
     },
   ): Promise<OrderDetail> {
     const order = await this.requireOrder(orderId);
-    const previous = order.status as OrderStatus;
+    const previous = order.status;
     if (previous === newStatus) {
       return this.findById(orderId);
     }
     const allowed = ALLOWED_ORDER_TRANSITIONS[previous] ?? [];
     if (!allowed.includes(newStatus)) {
-      throw new BadRequestException(`Illegal transition ${previous} → ${newStatus}`);
+      throw new BadRequestException(
+        `Illegal transition ${previous} → ${newStatus}`,
+      );
     }
 
     await this.prisma.$transaction([
       this.prisma.order.update({
         where: { id: orderId },
         data: {
-          status: newStatus as PrismaOrderStatus,
+          status: newStatus,
           petpoojaStatusRaw: extras?.petpoojaStatusRaw ?? undefined,
           readyAt: extras?.readyAt === undefined ? undefined : extras.readyAt,
           readyNotificationStatus: extras?.readyNotificationStatus ?? undefined,
-          readyNotificationChannel: extras?.readyNotificationChannel ?? undefined,
+          readyNotificationChannel:
+            extras?.readyNotificationChannel ?? undefined,
           claimLockedUntil: newStatus === 'collected' ? null : undefined,
           claimLockedBy: newStatus === 'collected' ? null : undefined,
         },
@@ -378,8 +402,8 @@ export class OrderService {
       this.prisma.orderStatusLog.create({
         data: {
           orderId,
-          status: newStatus as PrismaOrderStatus,
-          source: source as PrismaLogSource,
+          status: newStatus,
+          source: source,
           staffUserId: staffUserId ?? null,
         },
       }),
@@ -406,7 +430,10 @@ export class OrderService {
     return this.findById(orderId);
   }
 
-  async markPreparing(orderId: string, staffUserId: string): Promise<OrderDetail> {
+  async markPreparing(
+    orderId: string,
+    staffUserId: string,
+  ): Promise<OrderDetail> {
     return this.transition(orderId, 'preparing', 'staff', staffUserId);
   }
 
@@ -416,12 +443,21 @@ export class OrderService {
     if (order.status === 'confirmed') {
       await this.transition(orderId, 'preparing', 'staff', staffUserId);
     }
-    return this.transition(orderId, 'ready_for_handover', 'staff', staffUserId, {
-      readyAt: new Date(),
-    });
+    return this.transition(
+      orderId,
+      'ready_for_handover',
+      'staff',
+      staffUserId,
+      {
+        readyAt: new Date(),
+      },
+    );
   }
 
-  async claimForCollect(orderId: string, staffUserId: string): Promise<OrderDetail> {
+  async claimForCollect(
+    orderId: string,
+    staffUserId: string,
+  ): Promise<OrderDetail> {
     const order = await this.requireOrder(orderId);
     if (order.status !== 'ready_for_handover') {
       throw new BadRequestException('Order is not ready for handover');
@@ -450,7 +486,12 @@ export class OrderService {
     return this.findById(orderId);
   }
 
-  async collect(orderId: string, staffUserId: string, _staffSessionId?: string): Promise<OrderDetail> {
+  async collect(
+    orderId: string,
+    staffUserId: string,
+    _staffSessionId?: string,
+  ): Promise<OrderDetail> {
+    void _staffSessionId;
     const order = await this.requireOrder(orderId);
     if (order.status !== 'ready_for_handover') {
       throw new BadRequestException('Order is not ready for handover');
@@ -523,7 +564,10 @@ export class OrderService {
       const label = item.name?.trim();
       if (label) {
         const named = await this.prisma.menuItem.findFirst({
-          where: { isAvailable: true, name: { equals: label, mode: 'insensitive' } },
+          where: {
+            isAvailable: true,
+            name: { equals: label, mode: 'insensitive' },
+          },
         });
         if (named) {
           found.set(item.menuItemId, named);

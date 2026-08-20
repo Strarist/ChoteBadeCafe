@@ -20,7 +20,10 @@ import {
   ReplaceItemsDto,
   UpdateCustomerDto,
 } from './dto/order.dto';
-import { StaffAuthGuard, type AuthenticatedRequest } from '../auth/staff-auth.guard';
+import {
+  StaffAuthGuard,
+  type AuthenticatedRequest,
+} from '../auth/staff-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { OrderOrStaffAccessGuard } from '../auth/order-or-staff.guard';
@@ -34,7 +37,10 @@ export class OrderController {
   constructor(private readonly orders: OrderService) {}
 
   @Post()
-  create(@Req() req: Request, @Body() dto: CreateOrderDto): Promise<OrderDetail> {
+  create(
+    @Req() req: Request,
+    @Body() dto: CreateOrderDto,
+  ): Promise<OrderDetail> {
     this.createIpLimit.hit(`orders:${req.ip ?? 'unknown'}`);
     return this.orders.create(dto);
   }
@@ -97,14 +103,20 @@ export class OrderController {
   @Post(':id/preparing')
   @UseGuards(StaffAuthGuard, RolesGuard)
   @Roles('admin', 'manager', 'cashier')
-  markPreparing(@Param('id') id: string, @Req() req: AuthenticatedRequest): Promise<OrderDetail> {
+  markPreparing(
+    @Param('id') id: string,
+    @Req() req: AuthenticatedRequest,
+  ): Promise<OrderDetail> {
     return this.orders.markPreparing(id, req.staff!.staffUserId);
   }
 
   @Post(':id/ready')
   @UseGuards(StaffAuthGuard, RolesGuard)
   @Roles('admin', 'manager', 'cashier')
-  markReady(@Param('id') id: string, @Req() req: AuthenticatedRequest): Promise<OrderDetail> {
+  markReady(
+    @Param('id') id: string,
+    @Req() req: AuthenticatedRequest,
+  ): Promise<OrderDetail> {
     return this.orders.markReady(id, req.staff!.staffUserId);
   }
 
@@ -133,7 +145,15 @@ export class OrderController {
   @Post(':id/cancel')
   @UseGuards(StaffAuthGuard, RolesGuard)
   @Roles('admin', 'manager')
-  cancel(@Param('id') id: string, @Req() req: AuthenticatedRequest): Promise<OrderDetail> {
-    return this.orders.transition(id, 'cancelled', 'staff', req.staff!.staffUserId);
+  cancel(
+    @Param('id') id: string,
+    @Req() req: AuthenticatedRequest,
+  ): Promise<OrderDetail> {
+    return this.orders.transition(
+      id,
+      'cancelled',
+      'staff',
+      req.staff!.staffUserId,
+    );
   }
 }

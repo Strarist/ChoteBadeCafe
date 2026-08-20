@@ -44,7 +44,10 @@ export class OrderAccessService {
   }
 
   private hmac(body: string): string {
-    return createHmac('sha256', `${this.integrations.sessionSecret()}:order-access`)
+    return createHmac(
+      'sha256',
+      `${this.integrations.sessionSecret()}:order-access`,
+    )
       .update(body)
       .digest('base64url');
   }

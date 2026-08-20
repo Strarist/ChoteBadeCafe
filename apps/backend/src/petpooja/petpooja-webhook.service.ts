@@ -70,15 +70,22 @@ export class PetPoojaWebhookService {
       });
       orderId = found?.id;
     }
-    if (!orderId) throw new BadRequestException('Order not found for PetPooja webhook');
+    if (!orderId)
+      throw new BadRequestException('Order not found for PetPooja webhook');
 
     const order = await this.orders.findById(orderId);
     const raw = JSON.stringify(body.raw ?? body);
 
     if (mapped === 'ready_for_handover' && order.status === 'confirmed') {
-      await this.orders.transition(orderId, 'preparing', 'petpooja_webhook', null, {
-        petpoojaStatusRaw: raw,
-      });
+      await this.orders.transition(
+        orderId,
+        'preparing',
+        'petpooja_webhook',
+        null,
+        {
+          petpoojaStatusRaw: raw,
+        },
+      );
     }
 
     const extras =
@@ -90,13 +97,23 @@ export class PetPoojaWebhookService {
           }
         : { petpoojaStatusRaw: raw };
 
-    return this.orders.transition(orderId, mapped, 'petpooja_webhook', null, extras);
+    return this.orders.transition(
+      orderId,
+      mapped,
+      'petpooja_webhook',
+      null,
+      extras,
+    );
   }
 
   async handleAggregatorOrder(body: {
     source: 'swiggy' | 'zomato';
     customer: { name: string; mobile: string };
-    items: Array<{ menuItemId: string; quantity: number; instructions?: string }>;
+    items: Array<{
+      menuItemId: string;
+      quantity: number;
+      instructions?: string;
+    }>;
   }): Promise<OrderDetail> {
     return this.orders.create({
       source: body.source,

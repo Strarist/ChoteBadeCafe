@@ -1,4 +1,8 @@
-import { ALLOWED_ORDER_TRANSITIONS, canTransition, isPaidKitchenStatus } from './order-status';
+import {
+  ALLOWED_ORDER_TRANSITIONS,
+  canTransition,
+  isPaidKitchenStatus,
+} from './order-status';
 
 describe('order status machine', () => {
   it('allows the kitchen path after payment', () => {

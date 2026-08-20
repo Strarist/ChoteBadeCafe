@@ -25,8 +25,12 @@ export class OrderEventsListener implements OnModuleInit {
 
   onModuleInit(): void {
     try {
-      this.petpooja = this.moduleRef.get(PetPoojaOrderService, { strict: false });
-      this.notifications = this.moduleRef.get(NotificationsService, { strict: false });
+      this.petpooja = this.moduleRef.get(PetPoojaOrderService, {
+        strict: false,
+      });
+      this.notifications = this.moduleRef.get(NotificationsService, {
+        strict: false,
+      });
     } catch (err) {
       this.logger.warn(`Side-effect services not ready: ${String(err)}`);
     }

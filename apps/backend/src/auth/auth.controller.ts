@@ -22,7 +22,10 @@ export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
   @Post('staff/login')
-  login(@Req() req: Request, @Body() dto: LoginDto): Promise<StaffLoginResponse> {
+  login(
+    @Req() req: Request,
+    @Body() dto: LoginDto,
+  ): Promise<StaffLoginResponse> {
     this.loginIpLimit.hit(`login:${req.ip ?? 'unknown'}`);
     return this.auth.login(dto.name, dto.pin);
   }

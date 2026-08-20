@@ -7,7 +7,10 @@ import {
 } from 'class-validator';
 import type { OrderDetail, StaffRole, StaffUser } from '@cafe/shared-types';
 import { AuthService } from '../auth/auth.service';
-import { StaffAuthGuard, type AuthenticatedRequest } from '../auth/staff-auth.guard';
+import {
+  StaffAuthGuard,
+  type AuthenticatedRequest,
+} from '../auth/staff-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { MenuService } from '../menu/menu.service';
@@ -102,7 +105,12 @@ export class AdminController {
   @Post('orders/:id/cancel')
   @Roles('admin', 'manager')
   cancel(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
-    return this.orders.transition(id, 'cancelled', 'staff', req.staff!.staffUserId);
+    return this.orders.transition(
+      id,
+      'cancelled',
+      'staff',
+      req.staff!.staffUserId,
+    );
   }
 
   @Get('staff')
@@ -119,7 +127,10 @@ export class AdminController {
 
   @Patch('staff/:id')
   @Roles('admin')
-  updateStaff(@Param('id') id: string, @Body() dto: UpdateStaffDto): Promise<StaffUser> {
+  updateStaff(
+    @Param('id') id: string,
+    @Body() dto: UpdateStaffDto,
+  ): Promise<StaffUser> {
     return this.auth.updateStaff(id, dto);
   }
 }

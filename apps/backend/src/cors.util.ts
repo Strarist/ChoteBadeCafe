@@ -21,5 +21,8 @@ export function parseCorsOrigins(raw?: string): string[] {
 
 export function envCorsIsLocalhostOnly(raw?: string): boolean {
   const fromEnv = splitOrigins(raw ?? DEV_ORIGINS);
-  return fromEnv.length === 0 || fromEnv.every((origin) => /localhost|127\.0\.0\.1/.test(origin));
+  return (
+    fromEnv.length === 0 ||
+    fromEnv.every((origin) => /localhost|127\.0\.0\.1/.test(origin))
+  );
 }

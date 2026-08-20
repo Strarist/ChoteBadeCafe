@@ -28,7 +28,10 @@ async function bootstrap() {
   );
 
   const corsOrigins = parseCorsOrigins(process.env.CORS_ORIGINS);
-  if (process.env.NODE_ENV === 'production' && envCorsIsLocalhostOnly(process.env.CORS_ORIGINS)) {
+  if (
+    process.env.NODE_ENV === 'production' &&
+    envCorsIsLocalhostOnly(process.env.CORS_ORIGINS)
+  ) {
     throw new Error(
       'CORS_ORIGINS is still localhost-only. Set the three static-site https origins before production.',
     );

@@ -412,24 +412,51 @@ body {
 }
 
 .qty button,
-.actions button,
-.primary,
-.modal .actions button {
+.actions button:not(.primary),
+.modal .actions button:not(.primary),
+.banner-error button {
   min-height: 44px;
   min-width: 44px;
   border-radius: 999px;
   border: 1px solid var(--line);
   background: #fff;
+  color: var(--ink);
   font-weight: 600;
   cursor: pointer;
   padding: 0.4rem 0.85rem;
 }
 
-.primary {
+button.primary,
+.actions button.primary,
+.modal .actions button.primary {
+  min-height: 44px;
+  min-width: 44px;
+  border-radius: 999px;
+  border: 1px solid var(--burgundy);
   background: var(--burgundy);
   color: var(--cream);
-  border-color: var(--burgundy);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.4rem 0.85rem;
   width: 100%;
+}
+
+button.secondary,
+.modal .actions button.secondary {
+  min-height: 44px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #fffaf3;
+  color: var(--ink);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.4rem 0.85rem;
+  width: auto;
+  flex: 0 0 auto;
+}
+
+.secondary:hover {
+  border-color: var(--burgundy);
 }
 
 .cart-footer .total {
@@ -514,6 +541,8 @@ body {
   margin-top: 1rem;
 }
 
-.modal .actions .primary {
+.modal .actions .primary,
+.ticket .actions .primary {
   flex: 1;
+  width: auto;
 }

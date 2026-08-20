@@ -23,7 +23,10 @@ const LOGIN_MAX_ATTEMPTS = 8;
 
 @Injectable()
 export class AuthService {
-  private readonly loginAttempts = new Map<string, { count: number; resetAt: number }>();
+  private readonly loginAttempts = new Map<
+    string,
+    { count: number; resetAt: number }
+  >();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -35,7 +38,10 @@ export class AuthService {
     this.assertLoginAllowed(key);
 
     const staff = await this.prisma.staffUser.findFirst({
-      where: { name: { equals: name.trim(), mode: 'insensitive' }, isActive: true },
+      where: {
+        name: { equals: name.trim(), mode: 'insensitive' },
+        isActive: true,
+      },
     });
     if (!staff) {
       this.recordLoginFailure(key);
@@ -77,8 +83,11 @@ export class AuthService {
     if (a.length !== b.length || !timingSafeEqual(a, b)) {
       throw new UnauthorizedException('Invalid token');
     }
-    const payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf8')) as StaffSessionPayload;
-    if (payload.exp < Date.now()) throw new UnauthorizedException('Token expired');
+    const payload = JSON.parse(
+      Buffer.from(body, 'base64url').toString('utf8'),
+    ) as StaffSessionPayload;
+    if (payload.exp < Date.now())
+      throw new UnauthorizedException('Token expired');
     return payload;
   }
 
@@ -106,7 +115,9 @@ export class AuthService {
       return;
     }
     if (entry.count >= LOGIN_MAX_ATTEMPTS) {
-      throw new UnauthorizedException('Too many login attempts — try again later');
+      throw new UnauthorizedException(
+        'Too many login attempts — try again later',
+      );
     }
   }
 
@@ -121,7 +132,9 @@ export class AuthService {
   }
 
   async listStaff(): Promise<StaffUser[]> {
-    const rows = await this.prisma.staffUser.findMany({ orderBy: { createdAt: 'asc' } });
+    const rows = await this.prisma.staffUser.findMany({
+      orderBy: { createdAt: 'asc' },
+    });
     return rows.map((r) => this.toStaff(r));
   }
 
@@ -179,7 +192,9 @@ export class AuthService {
   }
 
   private hmac(body: string): string {
-    return createHmac('sha256', this.integrations.sessionSecret()).update(body).digest('base64url');
+    return createHmac('sha256', this.integrations.sessionSecret())
+      .update(body)
+      .digest('base64url');
   }
 
   private toStaff(row: {

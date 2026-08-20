@@ -115,7 +115,7 @@ export function Header() {
             </button>
             <button
               type="button"
-              className="grid size-10 place-items-center rounded-full border border-ink/10 bg-cream-warm/80 text-ink transition hover:border-burgundy/25 hover:bg-burgundy/[0.06] lg:hidden"
+              className="grid size-10 place-items-center rounded-full border border-ink/10 bg-cream-warm/80 text-ink transition hover:border-burgundy/25 hover:bg-burgundy/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burgundy/40 lg:hidden"
               aria-label={open ? "Close menu" : "Open menu"}
               aria-expanded={open}
               onClick={() => setOpen((v) => !v)}

@@ -11,10 +11,12 @@ import { prefetchMenu } from "../lib/menuCache"
 import { warmApi } from "../lib/warmApi"
 import { useConnectionStatus } from "../hooks/useConnectionStatus"
 import { ConnectionBanner } from "./ConnectionBanner"
+import { useCart } from "../context/CartContext"
 
 export function Layout() {
   const { pathname } = useLocation()
   const connectionStatus = useConnectionStatus()
+  const { isOpen: cartOpen } = useCart()
   useSmoothScroll()
 
   useEffect(() => {
@@ -52,12 +54,14 @@ export function Layout() {
         className="pointer-events-none fixed inset-x-0 top-0 -z-10 h-[70vh] bg-gradient-to-b from-cream-warm/80 via-transparent to-transparent"
         aria-hidden
       />
-      <Header />
-      <main className="page-main pb-24 md:pb-16">
-        <PageTransition />
-        <PullUpChair />
-      </main>
-      <Footer />
+      <div {...(cartOpen ? { inert: true as const } : {})}>
+        <Header />
+        <main className="page-main pb-24 md:pb-16">
+          <PageTransition />
+          <PullUpChair />
+        </main>
+        <Footer />
+      </div>
       <CartBar />
       <CartDrawer />
     </div>

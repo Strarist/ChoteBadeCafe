@@ -1,8 +1,14 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import type { RazorpayCheckoutPayload, RazorpayConfirmInput } from '@cafe/shared-types';
-import type { ParsedPaymentWebhook, PaymentGateway } from './payment-gateway.interface';
+import type {
+  RazorpayCheckoutPayload,
+  RazorpayConfirmInput,
+} from '@cafe/shared-types';
+import type {
+  ParsedPaymentWebhook,
+  PaymentGateway,
+} from './payment-gateway.interface';
 import { parseRazorpayWebhookPayload } from './razorpay-webhook.parser';
 
 /** Local/dev gateway — no network. Swap out when Razorpay keys are live. */
@@ -16,16 +22,17 @@ export class FakePaymentGateway implements PaymentGateway {
     return 'mock';
   }
 
-  async createCheckout(input: {
+  createCheckout(input: {
     orderId: string;
     amountPaise: number;
     receipt: string;
     customer?: { name?: string; email?: string | null; mobile?: string };
   }): Promise<RazorpayCheckoutPayload> {
     const name =
-      this.config.get<string>('RAZORPAY_CHECKOUT_NAME')?.trim() || 'Chote Bade Café';
+      this.config.get<string>('RAZORPAY_CHECKOUT_NAME')?.trim() ||
+      'Chote Bade Café';
     const customer = input.customer;
-    return {
+    return Promise.resolve({
       orderId: input.orderId,
       razorpayOrderId: `order_mock_${input.orderId.slice(-8)}_${Date.now()}`,
       amount: input.amountPaise,
@@ -38,7 +45,7 @@ export class FakePaymentGateway implements PaymentGateway {
         ...(customer?.email ? { email: customer.email } : {}),
         ...(customer?.mobile ? { contact: customer.mobile } : {}),
       },
-    };
+    });
   }
 
   /** Accepts HMAC with secret `mock`, matching Checkout confirm shape for local tests. */
@@ -52,13 +59,16 @@ export class FakePaymentGateway implements PaymentGateway {
     return timingSafeEqual(a, b);
   }
 
-  async verifyAndParseWebhook(
+  verifyAndParseWebhook(
     rawBody: Buffer,
-    _signature: string | undefined,
+    signature: string | undefined,
   ): Promise<ParsedPaymentWebhook> {
+    void signature;
     if (process.env.NODE_ENV === 'production') {
-      throw new ForbiddenException('Unsigned fake payment webhooks are disabled in production');
+      throw new ForbiddenException(
+        'Unsigned fake payment webhooks are disabled in production',
+      );
     }
-    return parseRazorpayWebhookPayload(rawBody);
+    return Promise.resolve(parseRazorpayWebhookPayload(rawBody));
   }
 }

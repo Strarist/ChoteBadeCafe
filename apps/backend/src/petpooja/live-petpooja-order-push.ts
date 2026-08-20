@@ -1,7 +1,14 @@
-import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { OrderDetail } from '@cafe/shared-types';
-import type { PetPoojaOrderPush, PetPoojaPushResult } from './petpooja-order-push.interface';
+import type {
+  PetPoojaOrderPush,
+  PetPoojaPushResult,
+} from './petpooja-order-push.interface';
 
 /**
  * Live PetPooja push — scaffold only until partner API docs/credentials (§9).
@@ -13,13 +20,15 @@ export class LivePetPoojaOrderPush implements PetPoojaOrderPush {
 
   constructor(private readonly config: ConfigService) {}
 
-  async pushOrder(order: OrderDetail): Promise<PetPoojaPushResult> {
+  pushOrder(order: OrderDetail): Promise<PetPoojaPushResult> {
     const appKey = this.config.get<string>('PETPOOJA_APP_KEY');
     const restId = this.config.get<string>('PETPOOJA_REST_ID');
     const token = this.config.get<string>('PETPOOJA_ACCESS_TOKEN');
     if (!appKey || !restId || !token) {
-      throw new ServiceUnavailableException(
-        'PetPooja live credentials incomplete. Refusing push.',
+      return Promise.reject(
+        new ServiceUnavailableException(
+          'PetPooja live credentials incomplete. Refusing push.',
+        ),
       );
     }
 

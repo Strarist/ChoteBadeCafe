@@ -16,7 +16,11 @@ import { IntegrationsConfigService } from '../integrations/integrations-config.s
     RazorpayPaymentGateway,
     {
       provide: PAYMENT_GATEWAY,
-      inject: [IntegrationsConfigService, FakePaymentGateway, RazorpayPaymentGateway],
+      inject: [
+        IntegrationsConfigService,
+        FakePaymentGateway,
+        RazorpayPaymentGateway,
+      ],
       useFactory: (
         integrations: IntegrationsConfigService,
         fake: FakePaymentGateway,

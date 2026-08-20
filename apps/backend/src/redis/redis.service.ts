@@ -10,7 +10,9 @@ export class RedisService implements OnModuleDestroy {
   constructor(configService: ConfigService) {
     const redisUrl = configService.get<string>('REDIS_URL')?.trim();
     if (!redisUrl) {
-      this.logger.warn('REDIS_URL unset — running without Redis (fine for a single free API).');
+      this.logger.warn(
+        'REDIS_URL unset — running without Redis (fine for a single free API).',
+      );
       this.client = null;
       return;
     }

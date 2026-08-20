@@ -11,7 +11,10 @@ export class HealthService {
   ) {}
 
   async check(): Promise<HealthResponse> {
-    const [database, redis] = await Promise.all([this.checkDatabase(), this.checkRedis()]);
+    const [database, redis] = await Promise.all([
+      this.checkDatabase(),
+      this.checkRedis(),
+    ]);
 
     // Redis is optional (socket fan-out). Do not take the API out of rotation if Redis is down.
     const ok = database === 'up';

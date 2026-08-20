@@ -19,7 +19,12 @@ import { IntegrationsModule } from '../integrations/integrations.module';
     forwardRef(() => NotificationsModule),
   ],
   controllers: [OrderController],
-  providers: [OrderService, OrderTokenService, OrderAccessService, OrderEventsListener],
+  providers: [
+    OrderService,
+    OrderTokenService,
+    OrderAccessService,
+    OrderEventsListener,
+  ],
   exports: [OrderService, OrderAccessService],
 })
 export class OrderModule {}

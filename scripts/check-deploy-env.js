@@ -59,8 +59,13 @@ if (site !== ':80' && !cors.some((origin) => origin.includes(site))) {
 }
 
 if (env.PAYMENT_ADAPTER === 'live') {
-  for (const key of ['RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET', 'RAZORPAY_WEBHOOK_SECRET']) {
+  for (const key of ['RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET']) {
     if (!env[key]) fail(`${key} is required when PAYMENT_ADAPTER=live.`);
+  }
+  if (!env.RAZORPAY_WEBHOOK_SECRET) {
+    console.warn(
+      'deploy-check: RAZORPAY_WEBHOOK_SECRET is unset — API will boot, but webhook backup is disabled until configured.',
+    );
   }
 }
 

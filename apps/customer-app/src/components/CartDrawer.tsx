@@ -12,6 +12,7 @@ import {
 } from "../lib/checkoutRecovery"
 import { openRazorpayCheckout } from "../lib/razorpayCheckout"
 import { getLenis } from "../hooks/useSmoothScroll"
+import { useModalFocus } from "../hooks/useModalFocus"
 import { isPaidOrderStatus, toCustomerError } from "../lib/customerError"
 
 function formatPrice(price: number) {
@@ -35,6 +36,7 @@ export function CartDrawer() {
     setItemInstructions,
   } = useCart()
   const navigate = useNavigate()
+  const { panelRef, closeButtonRef, requestClose } = useModalFocus(isOpen, closeCart)
 
   const [step, setStep] = useState<Step>("cart")
   const [name, setName] = useState("")
@@ -52,12 +54,35 @@ export function CartDrawer() {
   useEffect(() => {
     if (!isOpen) return
     const saved = loadPendingCheckout()
-    if (saved) {
-      setPendingCheckout(saved)
-      setName(saved.name)
-      setMobile(saved.mobile)
-      setPayMethod(saved.payMethod)
-      setStep("checkout")
+    if (!saved) return
+
+    let cancelled = false
+    void api
+      .get<OrderDetail>(`/orders/${saved.orderId}`, saved.orderId)
+      .then((current) => {
+        if (cancelled) return
+        if (isPaidOrderStatus(current.status) || current.paymentStatus === "paid") {
+          clearPendingCheckout()
+          setPendingCheckout(null)
+          return
+        }
+        setPendingCheckout(saved)
+        setName(saved.name)
+        setMobile(saved.mobile)
+        setPayMethod(saved.payMethod)
+        setStep("checkout")
+      })
+      .catch(() => {
+        if (cancelled) return
+        setPendingCheckout(saved)
+        setName(saved.name)
+        setMobile(saved.mobile)
+        setPayMethod(saved.payMethod)
+        setStep("checkout")
+      })
+
+    return () => {
+      cancelled = true
     }
   }, [isOpen])
 
@@ -85,7 +110,7 @@ export function CartDrawer() {
     }
     getLenis()?.stop()
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") closeCart()
+      if (e.key === "Escape") requestClose()
     }
     document.body.style.overflow = "hidden"
     window.addEventListener("keydown", onKey)
@@ -94,11 +119,14 @@ export function CartDrawer() {
       window.removeEventListener("keydown", onKey)
       getLenis()?.start()
     }
-  }, [isOpen, closeCart])
+  }, [isOpen, requestClose])
 
   const persistPending = (partial: PendingCheckout) => {
     savePendingCheckout(partial)
-    setPendingCheckout(partial)
+  }
+
+  const showRecoveryUi = () => {
+    setPendingCheckout(loadPendingCheckout())
   }
 
   const finishSuccess = (order: OrderDetail) => {
@@ -213,7 +241,10 @@ export function CartDrawer() {
       if (pending.accessToken) storeOrderAccess(pending.orderId, pending.accessToken)
       const current = await api.get<OrderDetail>(`/orders/${pending.orderId}`, pending.orderId)
       if (isPaidOrderStatus(current.status) || current.paymentStatus === "paid") {
-        finishSuccess(current)
+        clearPendingCheckout()
+        setPendingCheckout(null)
+        closeCart()
+        navigate(`/order/${current.id}`)
         return
       }
       const result = await completeCheckout(
@@ -225,6 +256,7 @@ export function CartDrawer() {
       )
       finishSuccess(result)
     } catch (err) {
+      showRecoveryUi()
       setError(toCustomerError(err))
       setStep("checkout")
     } finally {
@@ -287,6 +319,7 @@ export function CartDrawer() {
       )
       finishSuccess(result)
     } catch (err) {
+      showRecoveryUi()
       setError(toCustomerError(err))
       setStep("checkout")
     } finally {
@@ -297,18 +330,19 @@ export function CartDrawer() {
   return (
     <div
       className={`fixed inset-0 z-[80] ${isOpen ? "pointer-events-auto" : "pointer-events-none"}`}
-      aria-hidden={!isOpen}
+      {...(!isOpen ? { inert: true as const } : {})}
     >
       <button
         type="button"
         aria-label="Close cart"
-        onClick={closeCart}
+        onClick={requestClose}
         className={`absolute inset-0 bg-ink-deep/35 backdrop-blur-[3px] transition-opacity duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
           isOpen ? "opacity-100" : "opacity-0"
         }`}
       />
 
       <aside
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-label="Your table"
@@ -335,8 +369,9 @@ export function CartDrawer() {
           </div>
           <button
             type="button"
-            onClick={closeCart}
-            className="relative grid size-10 place-items-center rounded-full border border-ink/10 bg-cream shadow-[0_8px_20px_rgba(50,38,27,0.08)] transition hover:-translate-y-0.5"
+            ref={closeButtonRef}
+            onClick={requestClose}
+            className="relative grid size-10 place-items-center rounded-full border border-ink/10 bg-cream shadow-[0_8px_20px_rgba(50,38,27,0.08)] transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burgundy/40"
             aria-label="Close"
           >
             <X size={18} />
@@ -367,7 +402,7 @@ export function CartDrawer() {
 
           {step === "checkout" && (
             <div className="space-y-4">
-              {pendingCheckout && (
+              {pendingCheckout && !busy && (
                 <div className="space-y-2 rounded-2xl border border-clay/30 bg-clay/10 px-4 py-3">
                   <p className="text-sm font-semibold text-burgundy">Incomplete checkout</p>
                   <p className="text-xs text-ink-muted">
@@ -487,9 +522,9 @@ export function CartDrawer() {
             <>
               {items.length === 0 ? (
                 <div className="flex h-full min-h-[240px] flex-col items-center justify-center text-center">
-                  <p className="font-display text-xl text-ink-deep">Nothing on the table yet.</p>
+                  <p className="font-display text-xl text-ink-deep">Your table&apos;s still empty</p>
                   <p className="mt-2 max-w-[240px] text-sm text-ink-muted">
-                    Add a coffee or chai from the menu — half the plate is meant to be shared.
+                    Chota shuru karein? Add a coffee or chai from the menu.
                   </p>
                   <button
                     type="button"

@@ -13,7 +13,9 @@ export class OrderTokenService {
     const dayKey = this.dayKey(now);
 
     const seq = await this.prisma.$transaction(async (tx) => {
-      const existing = await tx.orderTokenSequence.findUnique({ where: { dayKey } });
+      const existing = await tx.orderTokenSequence.findUnique({
+        where: { dayKey },
+      });
       if (!existing) {
         return tx.orderTokenSequence.create({
           data: { dayKey, letterIndex: 0, counter: 1 },

@@ -38,6 +38,7 @@ export function mapRazorpayMethod(method: string | undefined): PaymentMethod {
   if (method === 'upi') return 'upi';
   if (method === 'qr') return 'qr';
   // netbanking / wallet / emi / etc. — treat as online card-like capture
-  if (method === 'netbanking' || method === 'wallet' || method === 'emi') return 'card';
+  if (method === 'netbanking' || method === 'wallet' || method === 'emi')
+    return 'card';
   return 'upi';
 }

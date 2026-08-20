@@ -19,13 +19,19 @@ export class NotificationsService {
         customerName: order.customer.name,
         token: order.token,
       });
-      return this.orders.setReadyNotification(orderId, result.status, result.channel);
+      return this.orders.setReadyNotification(
+        orderId,
+        result.status,
+        result.channel,
+      );
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       this.logger.error(`Ready notification failed: ${message}`);
       // SMS fallback attempt (still fake until BSP chosen)
       try {
-        this.logger.warn(`[FAKE SMS fallback] token ${order.token} → ${order.customer.mobile}`);
+        this.logger.warn(
+          `[FAKE SMS fallback] token ${order.token} → ${order.customer.mobile}`,
+        );
         return this.orders.setReadyNotification(orderId, 'sent', 'sms');
       } catch {
         return this.orders.setReadyNotification(orderId, 'failed', 'sms');

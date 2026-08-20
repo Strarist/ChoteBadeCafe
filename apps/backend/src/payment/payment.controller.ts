@@ -28,7 +28,9 @@ export class PaymentController {
 
   @Post('orders/:orderId/checkout')
   @UseGuards(OrderOrStaffAccessGuard('orderId'))
-  createCheckout(@Param('orderId') orderId: string): Promise<RazorpayCheckoutPayload> {
+  createCheckout(
+    @Param('orderId') orderId: string,
+  ): Promise<RazorpayCheckoutPayload> {
     return this.payments.createCheckout(orderId);
   }
 
@@ -52,7 +54,9 @@ export class PaymentController {
     @Body() body: { razorpayOrderId: string },
   ): Promise<OrderDetail> {
     if (process.env.NODE_ENV === 'production') {
-      throw new BadRequestException('Online payment is not available yet. Please pay at the counter.');
+      throw new BadRequestException(
+        'Online payment is not available yet. Please pay at the counter.',
+      );
     }
     return this.payments.mockConfirm(orderId, body.razorpayOrderId);
   }
@@ -64,7 +68,11 @@ export class PaymentController {
   ) {
     const raw =
       req.rawBody ??
-      Buffer.from(typeof req.body === 'string' ? req.body : JSON.stringify(req.body ?? {}));
+      Buffer.from(
+        typeof req.body === 'string'
+          ? req.body
+          : JSON.stringify(req.body ?? {}),
+      );
     return this.payments.handleWebhook(raw, signature);
   }
 }

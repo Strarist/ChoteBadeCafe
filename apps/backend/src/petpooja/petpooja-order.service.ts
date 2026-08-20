@@ -10,7 +10,8 @@ export class PetPoojaOrderService {
   private readonly logger = new Logger(PetPoojaOrderService.name);
 
   constructor(
-    @Inject(PETPOOJA_ORDER_PUSH) private readonly pushAdapter: PetPoojaOrderPush,
+    @Inject(PETPOOJA_ORDER_PUSH)
+    private readonly pushAdapter: PetPoojaOrderPush,
     private readonly orders: OrderService,
   ) {}
 

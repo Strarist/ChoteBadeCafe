@@ -17,7 +17,11 @@ import { AuthModule } from '../auth/auth.module';
     LivePetPoojaOrderPush,
     {
       provide: PETPOOJA_ORDER_PUSH,
-      inject: [IntegrationsConfigService, FakePetPoojaOrderPush, LivePetPoojaOrderPush],
+      inject: [
+        IntegrationsConfigService,
+        FakePetPoojaOrderPush,
+        LivePetPoojaOrderPush,
+      ],
       useFactory: (
         integrations: IntegrationsConfigService,
         fake: FakePetPoojaOrderPush,

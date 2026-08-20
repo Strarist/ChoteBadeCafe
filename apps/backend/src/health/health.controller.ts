@@ -8,7 +8,9 @@ export class HealthController {
   constructor(private readonly healthService: HealthService) {}
 
   @Get('health')
-  async check(@Res({ passthrough: true }) res: Response): Promise<HealthResponse> {
+  async check(
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<HealthResponse> {
     const result = await this.healthService.check();
     res.status(result.status === 'ok' ? 200 : 503);
     return result;

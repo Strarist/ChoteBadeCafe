@@ -1,6 +1,13 @@
-import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { NotifyReadyResult, ReadyNotifier } from './ready-notifier.interface';
+import type {
+  NotifyReadyResult,
+  ReadyNotifier,
+} from './ready-notifier.interface';
 
 /**
  * Live BSP notifier scaffold. Provider chosen via WHATSAPP_BSP_PROVIDER (gupshup|twilio|...).
@@ -12,7 +19,7 @@ export class LiveReadyNotifier implements ReadyNotifier {
 
   constructor(private readonly config: ConfigService) {}
 
-  async notifyReady(input: {
+  notifyReady(input: {
     mobile: string;
     customerName: string;
     token: string;
@@ -20,8 +27,10 @@ export class LiveReadyNotifier implements ReadyNotifier {
     const provider = this.config.get<string>('WHATSAPP_BSP_PROVIDER');
     const apiKey = this.config.get<string>('WHATSAPP_BSP_API_KEY');
     if (!provider || !apiKey) {
-      throw new ServiceUnavailableException(
-        'WhatsApp BSP credentials missing. Refusing live notification.',
+      return Promise.reject(
+        new ServiceUnavailableException(
+          'WhatsApp BSP credentials missing. Refusing live notification.',
+        ),
       );
     }
 
@@ -32,18 +41,20 @@ export class LiveReadyNotifier implements ReadyNotifier {
     // Automatic SMS fallback contract (still stub until SMS_FALLBACK_* wired)
     const smsKey = this.config.get<string>('SMS_FALLBACK_API_KEY');
     if (!smsKey) {
-      return {
+      return Promise.resolve({
         channel: 'whatsapp',
         status: 'failed',
         error: 'WhatsApp live impl pending and SMS fallback key missing',
-      };
+      });
     }
 
     this.logger.warn(
       `[SMS fallback scaffold] Would SMS token ${input.token} to ${input.mobile} via ${this.config.get('SMS_FALLBACK_PROVIDER') ?? 'unspecified'}`,
     );
-    throw new ServiceUnavailableException(
-      `Live notification provider "${provider}" is not implemented yet. Keep NOTIFICATION_ADAPTER=fake until BSP is chosen and wired (§9).`,
+    return Promise.reject(
+      new ServiceUnavailableException(
+        `Live notification provider "${provider}" is not implemented yet. Keep NOTIFICATION_ADAPTER=fake until BSP is chosen and wired (§9).`,
+      ),
     );
   }
 }

@@ -745,7 +745,7 @@ export default function App() {
               ))}
             </ul>
             <div className="actions">
-              <button type="button" onClick={() => setCollectTarget(null)}>
+              <button type="button" className="secondary" onClick={() => setCollectTarget(null)}>
                 Cancel
               </button>
               <button type="button" className="primary" disabled={busy} onClick={() => void confirmCollect()}>

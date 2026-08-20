@@ -51,7 +51,8 @@ export class IntegrationsConfigService implements OnModuleInit {
 
     if (process.env.NODE_ENV === 'production') {
       const weak =
-        /change-me|dev-cafe|session-secret-change/i.test(secret) || secret.length < 32;
+        /change-me|dev-cafe|session-secret-change/i.test(secret) ||
+        secret.length < 32;
       if (weak) {
         throw new Error(
           'STAFF_SESSION_SECRET looks like a dev default. Set a random 32+ char secret before production.',
@@ -59,14 +60,18 @@ export class IntegrationsConfigService implements OnModuleInit {
       }
       if (process.env.ALLOW_FAKE_PAYMENTS === '1') {
         throw new Error(
-          'ALLOW_FAKE_PAYMENTS=1 is forbidden in production. Mock checkout must stay off.',
+          'ALLOW_FAKE_PAYMENTS=1 is forbidden in production. On Render/hosting, set ALLOW_FAKE_PAYMENTS=0 or remove the variable (see DEPLOY-CLOUD.md). Mock checkout must stay off.',
         );
       }
     }
 
     const readiness = this.getReadiness();
-    this.logger.log(`PetPooja: ${readiness.petpooja.status} — ${readiness.petpooja.detail}`);
-    this.logger.log(`Payment: ${readiness.payment.status} — ${readiness.payment.detail}`);
+    this.logger.log(
+      `PetPooja: ${readiness.petpooja.status} — ${readiness.petpooja.detail}`,
+    );
+    this.logger.log(
+      `Payment: ${readiness.payment.status} — ${readiness.payment.detail}`,
+    );
     this.logger.log(
       `Notifications: ${readiness.notifications.status} — ${readiness.notifications.detail}`,
     );
@@ -81,12 +86,18 @@ export class IntegrationsConfigService implements OnModuleInit {
         'PAYMENT_ADAPTER=live but Razorpay credentials are missing. Set RAZORPAY_* or use fake.',
       );
     }
-    if (this.paymentMode() === 'live' && !stripEnv(this.config.get<string>('RAZORPAY_WEBHOOK_SECRET'))) {
-      throw new Error(
-        'PAYMENT_ADAPTER=live requires RAZORPAY_WEBHOOK_SECRET so captured payments can confirm if Checkout.js fails.',
+    if (
+      this.paymentMode() === 'live' &&
+      !stripEnv(this.config.get<string>('RAZORPAY_WEBHOOK_SECRET'))
+    ) {
+      this.logger.warn(
+        'PAYMENT_ADAPTER=live has no RAZORPAY_WEBHOOK_SECRET. Checkout.js signature confirm still works; webhook backup is disabled until you add the secret in Razorpay Dashboard → Webhooks.',
       );
     }
-    if (this.notificationMode() === 'live' && !this.hasNotificationCredentials()) {
+    if (
+      this.notificationMode() === 'live' &&
+      !this.hasNotificationCredentials()
+    ) {
       throw new Error(
         'NOTIFICATION_ADAPTER=live but WhatsApp/SMS credentials are missing. Configure BSP keys or use fake.',
       );
@@ -99,7 +110,10 @@ export class IntegrationsConfigService implements OnModuleInit {
 
   paymentMode(): AdapterMode {
     // Real Razorpay keys win over a leftover PAYMENT_ADAPTER=fake from first deploy.
-    if (this.hasRazorpayCredentials() && process.env.ALLOW_FAKE_PAYMENTS !== '1') {
+    if (
+      this.hasRazorpayCredentials() &&
+      process.env.ALLOW_FAKE_PAYMENTS !== '1'
+    ) {
       return 'live';
     }
     const explicit = this.config.get<string>('PAYMENT_ADAPTER');
@@ -118,23 +132,25 @@ export class IntegrationsConfigService implements OnModuleInit {
   hasPetpoojaCredentials(): boolean {
     return Boolean(
       this.config.get('PETPOOJA_APP_KEY') &&
-        this.config.get('PETPOOJA_APP_SECRET') &&
-        this.config.get('PETPOOJA_ACCESS_TOKEN') &&
-        this.config.get('PETPOOJA_REST_ID'),
+      this.config.get('PETPOOJA_APP_SECRET') &&
+      this.config.get('PETPOOJA_ACCESS_TOKEN') &&
+      this.config.get('PETPOOJA_REST_ID'),
     );
   }
 
   hasRazorpayCredentials(): boolean {
     const keyId = stripEnv(this.config.get<string>('RAZORPAY_KEY_ID'));
     const keySecret = stripEnv(this.config.get<string>('RAZORPAY_KEY_SECRET'));
-    return Boolean(keyId && keyId !== 'mock' && keySecret && keySecret !== 'mock');
+    return Boolean(
+      keyId && keyId !== 'mock' && keySecret && keySecret !== 'mock',
+    );
   }
 
   hasNotificationCredentials(): boolean {
     return Boolean(
       this.config.get('WHATSAPP_BSP_PROVIDER') &&
-        this.config.get('WHATSAPP_BSP_API_KEY') &&
-        this.config.get('SMS_FALLBACK_API_KEY'),
+      this.config.get('WHATSAPP_BSP_API_KEY') &&
+      this.config.get('SMS_FALLBACK_API_KEY'),
     );
   }
 
@@ -170,7 +186,9 @@ export class IntegrationsConfigService implements OnModuleInit {
         provider: this.config.get<string>('WHATSAPP_BSP_PROVIDER') ?? null,
       },
       auth: {
-        sessionSecretConfigured: Boolean(this.config.get('STAFF_SESSION_SECRET')),
+        sessionSecretConfigured: Boolean(
+          this.config.get('STAFF_SESSION_SECRET'),
+        ),
       },
     };
   }
@@ -185,7 +203,12 @@ export class IntegrationsConfigService implements OnModuleInit {
     hasCredentials: boolean,
     liveImplReady: boolean,
     detail: string,
-  ): { adapter: AdapterMode; status: IntegrationStatus; detail: string; hasCredentials: boolean } {
+  ): {
+    adapter: AdapterMode;
+    status: IntegrationStatus;
+    detail: string;
+    hasCredentials: boolean;
+  } {
     if (mode === 'fake') {
       return { adapter: mode, status: 'ready_fake', detail, hasCredentials };
     }

@@ -118,7 +118,24 @@ You want `"database":"up"`. `"redis":"skipped"` is correct when you did not crea
 
 7. Copy the API origin (`https://chote-bade-api.onrender.com`) — no trailing slash. This is `VITE_API_URL`.
 
-If the deploy fails, open **Logs**. Common issues: instance type was Starter (billing), or `STAFF_SESSION_SECRET` shorter than 32 characters.
+If the deploy fails, open **Logs**. Common issues:
+
+- Instance type was Starter (billing), or `STAFF_SESSION_SECRET` shorter than 32 characters.
+- **`ALLOW_FAKE_PAYMENTS=1 is forbidden in production`** — Render → **chote-bade-api** → **Environment** → set `ALLOW_FAKE_PAYMENTS` to `0` or delete it (do not copy from `.env.example`). Redeploy.
+- **`PAYMENT_ADAPTER=live requires RAZORPAY_WEBHOOK_SECRET`** (older builds) — redeploy after pulling latest `main`, or add `RAZORPAY_WEBHOOK_SECRET` from Razorpay Dashboard → Webhooks. Checkout works without it; the webhook is only a backup if the browser confirm fails.
+
+### Live Razorpay on Render (optional)
+
+If you set `RAZORPAY_KEY_ID` + `RAZORPAY_KEY_SECRET`, the API auto-switches to live payment (even when `PAYMENT_ADAPTER=fake`). Minimum env:
+
+| Key | Required for boot? | Notes |
+|---|---|---|
+| `RAZORPAY_KEY_ID` | Yes (live pay) | `rzp_live_…` or `rzp_test_…` |
+| `RAZORPAY_KEY_SECRET` | Yes (live pay) | Never expose on frontends |
+| `RAZORPAY_WEBHOOK_SECRET` | No | Recommended after go-live — backup if Checkout.js confirm fails |
+| `ALLOW_FAKE_PAYMENTS` | Must be `0` or unset | Never `1` in production |
+
+Customer static site also needs `VITE_RAZORPAY_KEY_ID` (same **Key ID** only) and a rebuild after you add it.
 
 ---
 

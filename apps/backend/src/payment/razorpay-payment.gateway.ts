@@ -7,8 +7,14 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import type { RazorpayCheckoutPayload, RazorpayConfirmInput } from '@cafe/shared-types';
-import type { ParsedPaymentWebhook, PaymentGateway } from './payment-gateway.interface';
+import type {
+  RazorpayCheckoutPayload,
+  RazorpayConfirmInput,
+} from '@cafe/shared-types';
+import type {
+  ParsedPaymentWebhook,
+  PaymentGateway,
+} from './payment-gateway.interface';
 import { parseRazorpayWebhookPayload } from './razorpay-webhook.parser';
 
 const MIN_AMOUNT_PAISE = 100;
@@ -34,7 +40,10 @@ export class RazorpayPaymentGateway implements PaymentGateway {
     receipt: string;
     customer?: { name?: string; email?: string | null; mobile?: string };
   }): Promise<RazorpayCheckoutPayload> {
-    if (!Number.isInteger(input.amountPaise) || input.amountPaise < MIN_AMOUNT_PAISE) {
+    if (
+      !Number.isInteger(input.amountPaise) ||
+      input.amountPaise < MIN_AMOUNT_PAISE
+    ) {
       throw new BadRequestException(
         `Amount must be at least ${MIN_AMOUNT_PAISE} paise (₹1). Got ${input.amountPaise}.`,
       );
@@ -58,19 +67,27 @@ export class RazorpayPaymentGateway implements PaymentGateway {
     });
 
     if (res.status === 401 || res.status === 403) {
-      this.logger.error(`Razorpay order create rejected (${res.status}) — check live keys`);
+      this.logger.error(
+        `Razorpay order create rejected (${res.status}) — check live keys`,
+      );
       throw new ServiceUnavailableException(
         'Online payment is temporarily unavailable. Please pay at the counter or try again.',
       );
     }
     if (!res.ok) {
-      this.logger.error(`Razorpay order create failed (${res.status}): ${await res.text()}`);
+      this.logger.error(
+        `Razorpay order create failed (${res.status}): ${await res.text()}`,
+      );
       throw new ServiceUnavailableException(
         'Online payment is temporarily unavailable. Please pay at the counter or try again.',
       );
     }
 
-    const data = (await res.json()) as { id: string; amount: number; currency?: string };
+    const data = (await res.json()) as {
+      id: string;
+      amount: number;
+      currency?: string;
+    };
     return {
       orderId: input.orderId,
       razorpayOrderId: data.id,
@@ -89,7 +106,7 @@ export class RazorpayPaymentGateway implements PaymentGateway {
     return timingSafeEqualUtf8(expected, input.razorpaySignature);
   }
 
-  async verifyAndParseWebhook(
+  verifyAndParseWebhook(
     rawBody: Buffer,
     signature: string | undefined,
   ): Promise<ParsedPaymentWebhook> {
@@ -101,7 +118,7 @@ export class RazorpayPaymentGateway implements PaymentGateway {
     if (!timingSafeEqualUtf8(expected, signature)) {
       throw new UnauthorizedException('Invalid Razorpay signature');
     }
-    return parseRazorpayWebhookPayload(rawBody);
+    return Promise.resolve(parseRazorpayWebhookPayload(rawBody));
   }
 
   private checkoutBranding(input: {
@@ -112,10 +129,13 @@ export class RazorpayPaymentGateway implements PaymentGateway {
     'name' | 'description' | 'logo' | 'themeColor' | 'prefill'
   > {
     const name =
-      this.config.get<string>('RAZORPAY_CHECKOUT_NAME')?.trim() || 'Chote Bade Café';
-    const logo = this.config.get<string>('RAZORPAY_CHECKOUT_LOGO')?.trim() || undefined;
+      this.config.get<string>('RAZORPAY_CHECKOUT_NAME')?.trim() ||
+      'Chote Bade Café';
+    const logo =
+      this.config.get<string>('RAZORPAY_CHECKOUT_LOGO')?.trim() || undefined;
     const themeColor =
-      this.config.get<string>('RAZORPAY_CHECKOUT_THEME_COLOR')?.trim() || undefined;
+      this.config.get<string>('RAZORPAY_CHECKOUT_THEME_COLOR')?.trim() ||
+      undefined;
     const customer = input.customer;
     return {
       name,
@@ -133,7 +153,9 @@ export class RazorpayPaymentGateway implements PaymentGateway {
   private require(key: string): string {
     const value = stripEnv(this.config.get<string>(key));
     if (!value || value === 'mock') {
-      this.logger.error(`${key} is missing or mock — refusing live Razorpay operation`);
+      this.logger.error(
+        `${key} is missing or mock — refusing live Razorpay operation`,
+      );
       throw new ServiceUnavailableException(
         'Online payment is temporarily unavailable. Please pay at the counter or try again.',
       );
