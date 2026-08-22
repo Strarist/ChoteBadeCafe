@@ -17,7 +17,12 @@
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+    "baseUrl": ".",
+    "paths": {
+      "@cafe/shared-types": ["../../packages/shared-types/src/index.ts"],
+      "@cafe/frontend-api": ["../../packages/frontend-api.ts"]
+    }
   },
   "include": ["src"]
 }

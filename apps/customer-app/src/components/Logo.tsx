@@ -10,8 +10,8 @@ export interface LogoProps {
 }
 
 /**
- * Production Chote Bade Café Brand Logo Component
- * Incorporates the authentic circular medallion emblem and brand wordmark.
+ * Circular medallion + stacked wordmark (CHOTE BADE / — CAFÉ —)
+ * matching the brand lockup: burgundy title, gold café line.
  */
 export function Logo({
   light = false,
@@ -21,8 +21,6 @@ export function Logo({
   asLink = true,
   showTagline = false,
 }: LogoProps) {
-  const wordColor = light ? "#ede6da" : "#5c2a32"
-
   const sizeClasses = {
     sm: "size-8 md:size-9",
     md: "size-10 md:size-11",
@@ -44,12 +42,15 @@ export function Logo({
     : "/images/branding/chote-bade-cafe-logo.png"
 
   const content = (
-    <div className={`logo-mark inline-flex items-center gap-2.5 sm:gap-3 group select-none ${className}`}>
+    <div
+      className={`logo-mark inline-flex items-center gap-2.5 sm:gap-3 group select-none ${className}`}
+    >
       <picture className="shrink-0 flex items-center justify-center">
         <source srcSet={webpSrc} type="image/webp" />
         <img
           src={pngSrc}
-          alt="Chote Bade Café"
+          alt={asLink || withWordmark ? "" : "Chote Bade Café"}
+          aria-hidden={asLink || withWordmark ? true : undefined}
           className={`object-contain transition-transform duration-500 group-hover:-translate-y-0.5 group-hover:scale-105 ${
             typeof size === "string" ? sizeClasses[size] : ""
           }`}
@@ -62,19 +63,16 @@ export function Logo({
       </picture>
 
       {withWordmark && (
-        <div className="flex flex-col justify-center min-w-0">
-          <span
-            className="logo-wordmark font-display leading-[1.05] tracking-tight"
-            style={{ color: wordColor }}
-          >
-            Chote Bade Cafe
+        <div className={`logo-wordmark ${light ? "logo-wordmark--light" : ""}`}>
+          <span className="logo-wordmark-title">Chote Bade</span>
+          <span className="logo-wordmark-cafe">
+            <span className="logo-wordmark-rule" aria-hidden />
+            <span className="logo-wordmark-cafe-text">Café</span>
+            <span className="logo-wordmark-rule" aria-hidden />
           </span>
           {showTagline && (
-            <span
-              className="mt-1 text-[0.62rem] font-sans font-semibold uppercase tracking-[0.18em]"
-              style={{ color: light ? "rgba(237,230,218,0.7)" : "#8b1e2d" }}
-            >
-              Chote Moments, Bade Memories
+            <span className="logo-wordmark-tagline">
+              Chote moments, Bade memories
             </span>
           )}
         </div>
@@ -85,7 +83,7 @@ export function Logo({
   if (asLink) {
     return (
       <Link to="/" className="inline-block" aria-label="Chote Bade Café home">
-        {content}
+        <span aria-hidden="true">{content}</span>
       </Link>
     )
   }

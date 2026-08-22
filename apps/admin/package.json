@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port 5174",
-    "build": "tsc --noEmit && vite build",
+    "build": "pnpm --filter @cafe/shared-types build && tsc --noEmit && vite build",
     "preview": "vite preview",
     "lint": "echo \"No lint configured yet\"",
     "test": "echo \"No tests yet\""

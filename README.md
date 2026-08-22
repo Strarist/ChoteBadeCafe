@@ -1,10 +1,6 @@
 # Chote Bade Café — Order System
 
 <p align="center">
-  <img src="apps/customer-app/public/images/branding/chote-bade-cafe-horizontal.svg" alt="Chote Bade Café" width="420" />
-</p>
-
-<p align="center">
   <strong>Customer ordering · Counter POS · Admin · Nest API</strong><br />
   Payment + kitchen handoff that feeds <strong>PetPooja</strong> — not a full POS replacement.
 </p>

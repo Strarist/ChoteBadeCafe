@@ -151,7 +151,7 @@ Create **three** Static Sites from the same repo. **New +** → **Static Site** 
 |---|---|
 | Name | `chote-bade` |
 | Branch | `main` |
-| Build command | `corepack enable && pnpm install --frozen-lockfile && pnpm --filter @cafe/customer-app build` |
+| Build command | `corepack enable && pnpm install --frozen-lockfile && pnpm --filter @cafe/shared-types build && pnpm --filter @cafe/customer-app build` |
 | Publish directory | `apps/customer-app/dist` |
 
 Add env var **`VITE_API_URL`** = the **Web Service** URL (the one whose `/health` is JSON).  
@@ -163,7 +163,7 @@ Add env var **`VITE_API_URL`** = the **Web Service** URL (the one whose `/health
 | Field | Value |
 |---|---|
 | Name | `chote-bade-counter` |
-| Build command | `corepack enable && pnpm install --frozen-lockfile && pnpm --filter @cafe/counter-pos build` |
+| Build command | `corepack enable && pnpm install --frozen-lockfile && pnpm --filter @cafe/shared-types build && pnpm --filter @cafe/counter-pos build` |
 | Publish directory | `apps/counter-pos/dist` |
 | `VITE_API_URL` | same API origin |
 | Rewrite | `/*` → `/index.html` |
@@ -173,7 +173,7 @@ Add env var **`VITE_API_URL`** = the **Web Service** URL (the one whose `/health
 | Field | Value |
 |---|---|
 | Name | `chote-bade-admin` |
-| Build command | `corepack enable && pnpm install --frozen-lockfile && pnpm --filter @cafe/admin build` |
+| Build command | `corepack enable && pnpm install --frozen-lockfile && pnpm --filter @cafe/shared-types build && pnpm --filter @cafe/admin build` |
 | Publish directory | `apps/admin/dist` |
 | `VITE_API_URL` | same API origin |
 | Rewrite | `/*` → `/index.html` |
@@ -188,9 +188,9 @@ For **each** of the three apps, [vercel.com/new](https://vercel.com/new) → imp
 
 | Project | Root Directory | Install | Build | Output |
 |---|---|---|---|---|
-| Customer | `apps/customer-app` | `cd ../.. && corepack enable && pnpm install --frozen-lockfile` | `cd ../.. && pnpm --filter @cafe/customer-app build` | `dist` |
-| Counter | `apps/counter-pos` | same install | `cd ../.. && pnpm --filter @cafe/counter-pos build` | `dist` |
-| Admin | `apps/admin` | same install | `cd ../.. && pnpm --filter @cafe/admin build` | `dist` |
+| Customer | `apps/customer-app` | `cd ../.. && corepack enable && pnpm install --frozen-lockfile` | `cd ../.. && pnpm --filter @cafe/shared-types build && pnpm --filter @cafe/customer-app build` | `dist` |
+| Counter | `apps/counter-pos` | same install | `cd ../.. && pnpm --filter @cafe/shared-types build && pnpm --filter @cafe/counter-pos build` | `dist` |
+| Admin | `apps/admin` | same install | `cd ../.. && pnpm --filter @cafe/shared-types build && pnpm --filter @cafe/admin build` | `dist` |
 
 Env var on all three (Production + Preview):
 

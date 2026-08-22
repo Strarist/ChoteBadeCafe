@@ -1,9 +1,3 @@
-import {
-  CAFE_MENU_SEED,
-  MENU_CATEGORY_ORDER,
-  SIGNATURE_ITEM_IDS,
-} from "@cafe/shared-types"
-
 export const images = {
   heroInterior:
     "https://images.unsplash.com/photo-1763750759240-a1398573772a?crop=entropy&cs=srgb&fm=jpg&q=85&w=1600",
@@ -103,55 +97,6 @@ export const betterList = [
     body: "One free table each week for anyone who just needs to sit warm.",
   },
 ] as const
-
-export type MenuItem = {
-  name: string
-  price: number
-  note?: string
-}
-
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-}
-
-/** Static mirror of the shared seed — kept for any local references. */
-export const menuSections: {
-  id: string
-  title: string
-  items: MenuItem[]
-}[] = (() => {
-  const byCategory = new Map<string, MenuItem[]>()
-  for (const item of CAFE_MENU_SEED) {
-    const list = byCategory.get(item.category) ?? []
-    list.push({
-      name: item.name,
-      price: Math.round(item.price / 100),
-      note: item.description,
-    })
-    byCategory.set(item.category, list)
-  }
-  const signatureItems = CAFE_MENU_SEED.filter((item) =>
-    SIGNATURE_ITEM_IDS.has(item.petpoojaItemId),
-  ).map((item) => ({
-    name: item.name,
-    price: Math.round(item.price / 100),
-    note: item.description,
-  }))
-  const sections = MENU_CATEGORY_ORDER.filter((title) => title !== "SIGNATURE PICKS")
-    .filter((title) => byCategory.has(title))
-    .map((title) => ({
-      id: slugify(title),
-      title,
-      items: byCategory.get(title) ?? [],
-    }))
-  return [
-    { id: "signature", title: "SIGNATURE PICKS", items: signatureItems },
-    ...sections,
-  ]
-})()
 
 export const journalPosts = [
   {

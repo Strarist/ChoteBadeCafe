@@ -10,11 +10,11 @@
   --color-ink-muted: #6f6152;
   --color-clay: #a95e47;
   --color-clay-deep: #8f4736;
-  --color-burgundy: #7a2f3a;
+  --color-burgundy: #801a2d;
   --color-burgundy-soft: #9a4450;
   --color-sage: #8c9a89;
   --color-sage-deep: #6f8071;
-  --color-gold: #c9a24b;
+  --color-gold: #c6934a;
   --color-line: #c6b8a9;
   --color-wash: #ded9ce;
 
@@ -357,28 +357,6 @@
     }
   }
 
-  .logo-wordmark {
-    font-size: clamp(1.05rem, 3.6vw, 1.35rem);
-    font-weight: 700;
-    letter-spacing: -0.03em;
-    position: relative;
-  }
-
-  @media (min-width: 768px) {
-    .logo-wordmark {
-      font-size: 1.5rem;
-    }
-  }
-
-  .logo-mark:hover .logo-wordmark {
-    transform: translateY(-1px);
-  }
-
-  .logo-mark:active {
-    transform: scale(0.97);
-    opacity: 0.85;
-  }
-
   .logo-mark {
     -webkit-tap-highlight-color: transparent;
     transition:
@@ -386,8 +364,97 @@
       opacity 160ms ease;
   }
 
+  .logo-mark:active {
+    transform: scale(0.97);
+    opacity: 0.85;
+  }
+
   .logo-wordmark {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+    min-width: 0;
+    line-height: 1;
     transition: transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .logo-mark:hover .logo-wordmark {
+    transform: translateY(-1px);
+  }
+
+  .logo-wordmark-title {
+    font-family: var(--font-display);
+    font-size: clamp(0.92rem, 2.8vw, 1.2rem);
+    font-weight: 700;
+    font-variation-settings: "SOFT" 30, "WONK" 0.4;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-burgundy);
+    white-space: nowrap;
+  }
+
+  .logo-wordmark-cafe {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin-top: 0.2rem;
+  }
+
+  .logo-wordmark-cafe-text {
+    font-family: var(--font-display);
+    font-size: clamp(0.58rem, 1.7vw, 0.72rem);
+    font-weight: 600;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--color-gold);
+    white-space: nowrap;
+  }
+
+  .logo-wordmark-rule {
+    flex: 1 1 auto;
+    height: 1px;
+    min-width: 0.55rem;
+    background: color-mix(in srgb, var(--color-gold) 88%, transparent);
+  }
+
+  .logo-wordmark-tagline {
+    margin-top: 0.35rem;
+    font-family: var(--font-display);
+    font-size: 0.58rem;
+    font-style: italic;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    color: color-mix(in srgb, var(--color-burgundy) 55%, var(--color-ink-muted));
+    white-space: nowrap;
+  }
+
+  .logo-wordmark--light .logo-wordmark-title {
+    color: #ede6da;
+  }
+
+  .logo-wordmark--light .logo-wordmark-cafe-text {
+    color: color-mix(in srgb, var(--color-gold) 92%, #fff);
+  }
+
+  .logo-wordmark--light .logo-wordmark-rule {
+    background: color-mix(in srgb, var(--color-gold) 70%, transparent);
+  }
+
+  .logo-wordmark--light .logo-wordmark-tagline {
+    color: rgba(237, 230, 218, 0.72);
+  }
+
+  @media (min-width: 768px) {
+    .logo-wordmark-title {
+      font-size: 1.28rem;
+      letter-spacing: 0.055em;
+    }
+
+    .logo-wordmark-cafe-text {
+      font-size: 0.76rem;
+      letter-spacing: 0.32em;
+    }
   }
 
   .menu-scroll-flash {

@@ -1,4 +1,4 @@
-import { type FormEvent, useMemo, useState } from "react"
+import { useMemo } from "react"
 import { Link, Navigate, useParams } from "react-router-dom"
 import { journalPosts } from "../data/site"
 import { Appear, EmergeLine, PageIntro } from "../components/MotionText"
