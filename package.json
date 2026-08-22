@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "packageManager": "pnpm@9.15.0",
   "scripts": {
-    "dev": "turbo run dev --filter=@cafe/backend --filter=@cafe/customer-app --filter=@cafe/counter-pos --filter=@cafe/admin",
+    "dev": "turbo run dev --filter=@cafe/shared-types --filter=@cafe/backend --filter=@cafe/customer-app --filter=@cafe/counter-pos --filter=@cafe/admin",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "test": "turbo run test",
