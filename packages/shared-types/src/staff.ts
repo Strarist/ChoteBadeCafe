@@ -37,6 +37,7 @@ export const ROLE_PERMISSIONS: Record<
     viewIntegrations: boolean;
     manageStaff: boolean;
     viewAllOrders: boolean;
+    moderateMemory: boolean;
   }
 > = {
   cashier: {
@@ -49,6 +50,7 @@ export const ROLE_PERMISSIONS: Record<
     viewIntegrations: false,
     manageStaff: false,
     viewAllOrders: false,
+    moderateMemory: false,
   },
   manager: {
     counterPos: true,
@@ -60,6 +62,7 @@ export const ROLE_PERMISSIONS: Record<
     viewIntegrations: true,
     manageStaff: false,
     viewAllOrders: true,
+    moderateMemory: true,
   },
   admin: {
     counterPos: true,
@@ -71,5 +74,6 @@ export const ROLE_PERMISSIONS: Record<
     viewIntegrations: true,
     manageStaff: true,
     viewAllOrders: true,
+    moderateMemory: true,
   },
 };

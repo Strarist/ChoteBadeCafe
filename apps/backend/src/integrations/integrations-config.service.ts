@@ -33,6 +33,14 @@ export interface IntegrationReadiness {
   auth: {
     sessionSecretConfigured: boolean;
   };
+  tables: {
+    allowlistConfigured: boolean;
+    detail: string;
+  };
+  memoryWall: {
+    status: 'ready';
+    detail: string;
+  };
 }
 
 @Injectable()
@@ -79,6 +87,16 @@ export class IntegrationsConfigService implements OnModuleInit {
     if (this.petpoojaMode() === 'live' && !this.hasPetpoojaCredentials()) {
       throw new Error(
         'PETPOOJA_ADAPTER=live but PetPooja credentials are missing. Set PETPOOJA_* or use fake.',
+      );
+    }
+    if (this.petpoojaMode() === 'live' && !this.hasPetpoojaCallbackTarget()) {
+      throw new Error(
+        'PETPOOJA_ADAPTER=live requires PUBLIC_API_URL (API origin) or PETPOOJA_CALLBACK_URL so save_order can register status callbacks.',
+      );
+    }
+    if (this.notificationMode() === 'live' && process.env.NOTIFICATION_LIVE_OK !== '1') {
+      throw new Error(
+        'NOTIFICATION_ADAPTER=live refused: live WhatsApp/SMS is not implemented yet. Keep NOTIFICATION_ADAPTER=fake, or set NOTIFICATION_LIVE_OK=1 after the provider is wired.',
       );
     }
     if (this.paymentMode() === 'live' && !this.hasRazorpayCredentials()) {
@@ -131,11 +149,22 @@ export class IntegrationsConfigService implements OnModuleInit {
 
   hasPetpoojaCredentials(): boolean {
     return Boolean(
-      this.config.get('PETPOOJA_APP_KEY') &&
-      this.config.get('PETPOOJA_APP_SECRET') &&
-      this.config.get('PETPOOJA_ACCESS_TOKEN') &&
-      this.config.get('PETPOOJA_REST_ID'),
+      stripEnv(this.config.get<string>('PETPOOJA_APP_KEY')) &&
+        stripEnv(this.config.get<string>('PETPOOJA_APP_SECRET')) &&
+        stripEnv(this.config.get<string>('PETPOOJA_ACCESS_TOKEN')) &&
+        stripEnv(this.config.get<string>('PETPOOJA_REST_ID')),
     );
+  }
+
+  hasPetpoojaCallbackTarget(): boolean {
+    return Boolean(
+      stripEnv(this.config.get<string>('PETPOOJA_CALLBACK_URL')) ||
+        stripEnv(this.config.get<string>('PUBLIC_API_URL')),
+    );
+  }
+
+  petpoojaRestId(): string | undefined {
+    return stripEnv(this.config.get<string>('PETPOOJA_REST_ID')) || undefined;
   }
 
   hasRazorpayCredentials(): boolean {
@@ -149,26 +178,28 @@ export class IntegrationsConfigService implements OnModuleInit {
   hasNotificationCredentials(): boolean {
     return Boolean(
       this.config.get('WHATSAPP_BSP_PROVIDER') &&
-      this.config.get('WHATSAPP_BSP_API_KEY') &&
-      this.config.get('SMS_FALLBACK_API_KEY'),
+        this.config.get('WHATSAPP_BSP_API_KEY') &&
+        this.config.get('SMS_FALLBACK_API_KEY'),
     );
   }
 
   petpoojaWebhookSecret(): string | undefined {
-    return this.config.get<string>('PETPOOJA_WEBHOOK_SECRET') || undefined;
+    return stripEnv(this.config.get<string>('PETPOOJA_WEBHOOK_SECRET')) || undefined;
   }
 
   getReadiness(): IntegrationReadiness {
     const petMode = this.petpoojaMode();
     const payMode = this.paymentMode();
     const noteMode = this.notificationMode();
+    const petLiveReady =
+      this.hasPetpoojaCredentials() && this.hasPetpoojaCallbackTarget();
 
     return {
       petpooja: this.describe(
         petMode,
         this.hasPetpoojaCredentials(),
-        false, // live HTTP impl still pending partner docs
-        'Menu sync + order push + status webhook adapters ready; live HTTP awaits PetPooja sandbox docs (§9).',
+        petLiveReady,
+        'Live save_order + mapped_restaurant_menus + status/push-menu webhooks ready. Set PETPOOJA_* + PUBLIC_API_URL, then PETPOOJA_ADAPTER=live.',
       ),
       payment: this.describe(
         payMode,
@@ -189,6 +220,19 @@ export class IntegrationsConfigService implements OnModuleInit {
         sessionSecretConfigured: Boolean(
           this.config.get('STAFF_SESSION_SECRET'),
         ),
+      },
+      tables: {
+        allowlistConfigured: Boolean(
+          (process.env.TABLE_IDS ?? '').split(',').some((s) => s.trim()),
+        ),
+        detail: (process.env.TABLE_IDS ?? '').trim()
+          ? 'TABLE_IDS allowlist active for QR orders'
+          : 'TABLE_IDS unset — any tableId accepted (set before production QR print)',
+      },
+      memoryWall: {
+        status: 'ready' as const,
+        detail:
+          'Public submit + admin/manager moderate (accept / reject / delete / staff pick)',
       },
     };
   }
@@ -224,7 +268,7 @@ export class IntegrationsConfigService implements OnModuleInit {
       return {
         adapter: mode,
         status: 'impl_pending',
-        detail: `${detail} Credentials present; swap Fake* for Live* when partner API is wired.`,
+        detail: `${detail} Credentials present; callback URL / PUBLIC_API_URL still required.`,
         hasCredentials,
       };
     }

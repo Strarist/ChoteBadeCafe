@@ -1,4 +1,5 @@
-import { Link } from "react-router-dom"
+import { type FormEvent, useMemo, useState } from "react"
+import { Link, Navigate, useParams } from "react-router-dom"
 import { journalPosts } from "../data/site"
 import { Appear, EmergeLine, PageIntro } from "../components/MotionText"
 import { Reveal } from "../components/Reveal"
@@ -20,7 +21,7 @@ export function JournalPage() {
             <EmergeLine delay={280}>the counter.</EmergeLine>
           </h1>
           <Appear delay={420} as="p" className="mt-6 text-[1.05rem] leading-relaxed text-ink-muted">
-            Behind-the-scenes, bean stories, honest lists. Storytelling first, never SEO soup.
+            Behind-the-scenes, bean stories, honest lists. Drafts live here for now — swap in final essays anytime.
           </Appear>
         </PageIntro>
 
@@ -54,6 +55,14 @@ export function JournalPage() {
 }
 
 export function JournalPostPage() {
+  const { slug } = useParams<{ slug: string }>()
+  const post = useMemo(
+    () => journalPosts.find((item) => item.slug === slug),
+    [slug],
+  )
+
+  if (!post) return <Navigate to="/journal" replace />
+
   return (
     <section className="px-5 pt-32 pb-20 md:px-8 md:pt-36 md:pb-28">
       <div className="mx-auto max-w-[720px]">
@@ -63,14 +72,31 @@ export function JournalPostPage() {
               ← Back to journal
             </Link>
           </Appear>
-          <h1 className="mt-6 font-display text-[clamp(2.2rem,5vw,3.6rem)] leading-[1.1] tracking-[-0.03em] text-burgundy">
-            <EmergeLine delay={120}>A note from</EmergeLine>
-            <EmergeLine delay={260}>the counter.</EmergeLine>
-          </h1>
-          <Appear delay={400} as="p" className="mt-6 text-[1.05rem] leading-relaxed text-ink-muted">
-            We're still wiping the counter on this one — full journal essays land soon. Until then, pull up a chair and stay awhile.
+          <Appear delay={80} as="p" className="mt-6 text-xs font-semibold tracking-[0.12em] text-ink-muted">
+            {post.date}
           </Appear>
+          <h1 className="mt-3 font-display text-[clamp(2.2rem,5vw,3.6rem)] leading-[1.1] tracking-[-0.03em] text-burgundy">
+            <EmergeLine delay={120}>{post.title}</EmergeLine>
+          </h1>
         </PageIntro>
+
+        <Reveal delay={100}>
+          <div className="media-card mt-10 overflow-hidden rounded-[1.5rem] bg-wash aspect-[16/10] shadow-[0_12px_36px_rgba(50,38,27,0.07)]">
+            <img src={post.image} alt="" className="h-full w-full object-cover" />
+          </div>
+        </Reveal>
+
+        <div className="mt-10 space-y-5 text-[1.05rem] leading-relaxed text-ink-muted">
+          {post.body.map((paragraph, i) => (
+            <Reveal key={i} delay={Math.min(i * 60, 180)}>
+              <p>{paragraph}</p>
+            </Reveal>
+          ))}
+        </div>
+
+        <p className="mt-12 rounded-2xl border border-dashed border-burgundy/25 bg-burgundy/[0.04] px-4 py-3 text-sm text-ink-muted">
+          Placeholder essay — replace these paragraphs in <code className="font-mono text-xs">site.ts</code> when the final note is ready.
+        </p>
       </div>
     </section>
   )

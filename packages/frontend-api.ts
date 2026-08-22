@@ -1,6 +1,16 @@
+/** AbortSignal that works when `AbortSignal.timeout` is missing (older Safari). */
+export function abortAfter(ms: number): AbortSignal {
+  if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+    return AbortSignal.timeout(ms);
+  }
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), ms);
+  return controller.signal;
+}
+
 /** Browser API base — strips trailing slashes so `/auth/...` does not become `//auth/...`. */
 export function resolveApiBase(raw = import.meta.env.VITE_API_URL): string {
-  const value = (raw ?? '/api').trim().replace(/\/+$/, '');
+  const value = (raw ?? '/api').trim().replace(/\/+$/, '') || '/api';
   return value || '/api';
 }
 
@@ -12,6 +22,16 @@ export function joinApiUrl(path: string, base = resolveApiBase()): string {
 export function socketOrigin(base = resolveApiBase()): string {
   if (/^https?:\/\//i.test(base)) return new URL(base).origin;
   return typeof window !== 'undefined' ? window.location.origin : '';
+}
+
+/** Resolve API-hosted media (e.g. `/uploads/memory/…`) for <img src>. */
+export function mediaUrl(path: string, base = resolveApiBase()): string {
+  if (!path) return '';
+  if (/^https?:\/\//i.test(path) || path.startsWith('blob:') || path.startsWith('data:')) {
+    return path;
+  }
+  const normalized = path.startsWith('/') ? path : `/${path}`;
+  return `${socketOrigin(base)}${normalized}`;
 }
 
 export function throwIfNotJson(res: Response, text: string): void {
@@ -90,7 +110,7 @@ export async function resilientFetch(
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
-      const signal = AbortSignal.timeout(timeoutMs);
+      const signal = abortAfter(timeoutMs);
       const res = await fetch(input, { ...fetchInit, signal });
 
       if (method === 'GET' && RETRYABLE_STATUSES.has(res.status) && attempt < maxAttempts - 1) {

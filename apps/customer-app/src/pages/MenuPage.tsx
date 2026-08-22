@@ -1,17 +1,28 @@
-import { useEffect, useMemo, useState } from "react"
-import { LayoutGrid, List, Minus, Plus } from "lucide-react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { LayoutGrid, List, Minus, Plus, UtensilsCrossed, X } from "lucide-react"
 import type { MenuItem as ApiMenuItem } from "@cafe/shared-types"
-import { images } from "../data/site"
+import {
+  MENU_CATEGORY_CHIP,
+  MENU_CATEGORY_ORDER,
+  MENU_ITEM_ORDER,
+  SIGNATURE_ITEM_IDS,
+} from "@cafe/shared-types"
 import { getCatalogEntry } from "../data/menuCatalog"
+import { site } from "../data/site"
 import { Appear, EmergeLine, PageIntro } from "../components/MotionText"
+import { Marquee } from "../components/Marquee"
 import { Reveal } from "../components/Reveal"
 import { useCart } from "../context/CartContext"
 import { fetchMenu, peekMenuCache, peekMenuFallback } from "../lib/menuCache"
+import { getLenis } from "../hooks/useSmoothScroll"
+
+const SIGNATURE_CATEGORY = "SIGNATURE PICKS"
 
 type MenuView = "photos" | "whole"
 
 type DisplayItem = {
   id: string
+  petpoojaItemId: string | null
   name: string
   displayName: string
   price: number
@@ -20,6 +31,7 @@ type DisplayItem = {
   imageAlt: string
   tags: string[]
   isAddon: boolean
+  nutritionLabel: string | null
 }
 
 type MenuSection = {
@@ -41,8 +53,36 @@ function slugify(value: string) {
     .replace(/^-|-$/g, "")
 }
 
+function toDisplayItem(item: ApiMenuItem): DisplayItem {
+  const catalog = getCatalogEntry(item.name)
+  const isAddon = /milk|add-on|syrup/i.test(item.category) || catalog.tags.includes("ADD-ON")
+  const tags = [...catalog.tags]
+  const ppId = item.petpoojaItemId ?? item.id
+  if (SIGNATURE_ITEM_IDS.has(ppId) && !tags.includes("SIGNATURE")) {
+    tags.push("SIGNATURE")
+  }
+  const nutrition = catalog.nutrition
+  const nutritionLabel = nutrition
+    ? `${nutrition.kcal} kcal · ${nutrition.proteinG}g protein · ${nutrition.fiberG}g fiber`
+    : null
+  return {
+    id: item.id,
+    petpoojaItemId: item.petpoojaItemId ?? (item.id.startsWith("pp-") ? item.id : null),
+    name: item.name,
+    displayName: catalog.displayName,
+    price: Math.round(item.price / 100),
+    note: item.description?.trim() || catalog.description,
+    image: catalog.image,
+    imageAlt: catalog.imageAlt,
+    tags,
+    isAddon,
+    nutritionLabel,
+  }
+}
+
 function toSections(apiItems: ApiMenuItem[]): MenuSection[] {
   const map = new Map<string, MenuSection>()
+  const signatureItems: DisplayItem[] = []
 
   for (const item of apiItems) {
     const id = slugify(item.category) || "menu"
@@ -51,23 +91,42 @@ function toSections(apiItems: ApiMenuItem[]): MenuSection[] {
       title: item.category,
       items: [],
     }
-    const catalog = getCatalogEntry(item.name)
-    const isAddon = /milk|add-on|syrup/i.test(item.category) || catalog.tags.includes("ADD-ON")
-    existing.items.push({
-      id: item.id,
-      name: item.name,
-      displayName: catalog.displayName,
-      price: Math.round(item.price / 100),
-      note: item.description?.trim() || catalog.description,
-      image: catalog.image,
-      imageAlt: catalog.imageAlt,
-      tags: catalog.tags,
-      isAddon,
-    })
+    const display = toDisplayItem(item)
+    existing.items.push(display)
     map.set(id, existing)
+
+    const ppId = item.petpoojaItemId ?? item.id
+    if (SIGNATURE_ITEM_IDS.has(ppId)) {
+      signatureItems.push(display)
+    }
   }
 
-  return Array.from(map.values())
+  if (signatureItems.length) {
+    map.set(slugify(SIGNATURE_CATEGORY), {
+      id: slugify(SIGNATURE_CATEGORY),
+      title: SIGNATURE_CATEGORY,
+      items: signatureItems,
+    })
+  }
+
+  const orderIndex = new Map(MENU_CATEGORY_ORDER.map((title, i) => [slugify(title), i]))
+  const itemOrder = new Map(MENU_ITEM_ORDER.map((id, i) => [id, i]))
+
+  for (const section of map.values()) {
+    section.items.sort((a, b) => {
+      const ao = itemOrder.get(a.petpoojaItemId ?? "") ?? 9999
+      const bo = itemOrder.get(b.petpoojaItemId ?? "") ?? 9999
+      if (ao !== bo) return ao - bo
+      return a.displayName.localeCompare(b.displayName)
+    })
+  }
+
+  return Array.from(map.values()).sort((a, b) => {
+    const ai = orderIndex.get(a.id) ?? 999
+    const bi = orderIndex.get(b.id) ?? 999
+    if (ai !== bi) return ai - bi
+    return a.title.localeCompare(b.title)
+  })
 }
 
 function QtyControls({
@@ -123,70 +182,12 @@ function QtyControls({
       onClick={onAdd}
       className={
         compact
-          ? "font-mono text-[0.68rem] font-semibold tracking-[0.06em] text-burgundy transition hover:text-clay"
+          ? "inline-flex min-h-10 items-center rounded-full border border-burgundy/25 bg-cream px-4 py-2 text-[0.78rem] font-semibold tracking-wide text-burgundy shadow-[0_2px_8px_rgba(50,38,27,0.08)] transition hover:border-burgundy/45 hover:bg-burgundy hover:text-cream active:scale-95"
           : "text-[0.82rem] font-semibold tracking-wide text-ink-deep transition hover:text-clay"
       }
     >
       Add +
     </button>
-  )
-}
-
-function WholeMenuSection({
-  section,
-  qtyFor,
-  justAdded,
-  onDecrement,
-  onIncrement,
-  onAdd,
-}: {
-  section: MenuSection
-  qtyFor: (id: string) => number
-  justAdded: string | null
-  onDecrement: (id: string) => void
-  onIncrement: (id: string) => void
-  onAdd: (sectionId: string, sectionTitle: string, item: DisplayItem) => void
-}) {
-  return (
-    <div>
-      <h2 className="font-display text-[1.85rem] italic tracking-[-0.02em] text-burgundy md:text-[2.2rem]">
-        {section.title}
-      </h2>
-      <ul className="mt-5 space-y-5">
-        {section.items.map((item) => {
-          const qty = qtyFor(item.id)
-          const added = justAdded === item.id
-          return (
-            <li key={item.id}>
-              <div className="flex items-baseline justify-between gap-3">
-                <p className="min-w-0 font-mono text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-ink-deep sm:text-[0.78rem]">
-                  {item.name}
-                </p>
-                <span className="shrink-0 font-mono text-[0.72rem] text-ink-deep sm:text-[0.78rem]">
-                  {formatPrice(item.price, item.isAddon)}
-                </span>
-              </div>
-              {item.note ? (
-                <p className="mt-1 max-w-[22rem] font-mono text-[0.68rem] leading-relaxed text-ink-muted sm:text-[0.72rem]">
-                  {item.note}
-                </p>
-              ) : null}
-              <div className="mt-2 flex justify-end">
-                <QtyControls
-                  itemName={item.displayName}
-                  qty={qty}
-                  added={added}
-                  compact
-                  onDecrement={() => onDecrement(item.id)}
-                  onIncrement={() => onIncrement(item.id)}
-                  onAdd={() => onAdd(section.id, section.title, item)}
-                />
-              </div>
-            </li>
-          )
-        })}
-      </ul>
-    </div>
   )
 }
 
@@ -205,66 +206,56 @@ function WholeMenu({
   onIncrement: (id: string) => void
   onAdd: (sectionId: string, sectionTitle: string, item: DisplayItem) => void
 }) {
-  const mid = Math.ceil(sections.length / 2)
-  const colA = sections.slice(0, mid)
-  const colB = sections.slice(mid)
-
   return (
-    <div className="grid grid-cols-1 gap-10 lg:grid-cols-3 lg:gap-12 lg:items-start">
-      <div className="space-y-6">
-        <PageIntro>
-          <h1 className="font-display text-[clamp(2.4rem,9vw,3.8rem)] italic leading-[1.05] tracking-[-0.03em] text-burgundy">
-            <EmergeLine delay={80}>Explore Our Menu</EmergeLine>
-          </h1>
-          <Appear
-            delay={260}
-            as="p"
-            className="mt-4 max-w-sm font-mono text-[0.78rem] leading-relaxed text-ink-muted sm:text-[0.84rem]"
-          >
-            Thoughtfully crafted coffee, slow-steeped chai, and seasonal drinks made with
-            intentional ingredients that love you right back.
-          </Appear>
-        </PageIntro>
-        <Reveal delay={120}>
-          <div className="menu-photo img-pop aspect-[4/5] overflow-hidden sm:aspect-[5/4] lg:aspect-[3/4]">
-            <img
-              src={images.coffeeCup}
-              alt="Milk being poured into a cup of coffee"
-              className="h-full w-full object-cover"
-            />
-          </div>
-        </Reveal>
-      </div>
-
-      <div className="space-y-10">
-        {colA.map((section, index) => (
-          <Reveal key={section.id} delay={index * 70}>
-            <WholeMenuSection
-              section={section}
-              qtyFor={qtyFor}
-              justAdded={justAdded}
-              onDecrement={onDecrement}
-              onIncrement={onIncrement}
-              onAdd={onAdd}
-            />
-          </Reveal>
-        ))}
-      </div>
-
-      <div className="space-y-10">
-        {colB.map((section, index) => (
-          <Reveal key={section.id} delay={index * 70 + 40}>
-            <WholeMenuSection
-              section={section}
-              qtyFor={qtyFor}
-              justAdded={justAdded}
-              onDecrement={onDecrement}
-              onIncrement={onIncrement}
-              onAdd={onAdd}
-            />
-          </Reveal>
-        ))}
-      </div>
+    <div className="mx-auto max-w-xl space-y-10">
+      {sections.map((sec) => (
+        <section key={sec.id}>
+          <h2 className="mb-4 font-mono text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-burgundy">
+            {sec.title}
+          </h2>
+          <ul className="space-y-5 sm:space-y-6">
+            {sec.items.map((item) => {
+              const qty = qtyFor(item.id)
+              const added = justAdded === item.id
+              return (
+                <li key={item.id} className="border-b border-ink/8 pb-5 last:border-0 last:pb-0">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-mono text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-ink-deep sm:text-[0.78rem]">
+                        {item.displayName}
+                      </p>
+                      {item.note ? (
+                        <p className="mt-1 font-mono text-[0.68rem] leading-relaxed text-ink-muted sm:text-[0.72rem]">
+                          {item.note}
+                        </p>
+                      ) : null}
+                      {item.nutritionLabel ? (
+                        <p className="mt-1.5 font-mono text-[0.62rem] tracking-[0.04em] text-gold sm:text-[0.65rem]">
+                          {item.nutritionLabel}
+                        </p>
+                      ) : null}
+                    </div>
+                    <span className="shrink-0 pt-0.5 font-mono text-[0.72rem] text-ink-deep sm:text-[0.78rem]">
+                      {formatPrice(item.price, item.isAddon)}
+                    </span>
+                  </div>
+                  <div className="mt-3 flex justify-end">
+                    <QtyControls
+                      itemName={item.displayName}
+                      qty={qty}
+                      added={added}
+                      compact
+                      onDecrement={() => onDecrement(item.id)}
+                      onIncrement={() => onIncrement(item.id)}
+                      onAdd={() => onAdd(sec.id, sec.title, item)}
+                    />
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        </section>
+      ))}
     </div>
   )
 }
@@ -275,10 +266,13 @@ export function MenuPage() {
   const [filter, setFilter] = useState<string>("all")
   const [view, setView] = useState<MenuView>("photos")
   const [filterVisible, setFilterVisible] = useState(true)
+  const [categoryOpen, setCategoryOpen] = useState(false)
   const [justAdded, setJustAdded] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const { addItem, increment, decrement, items, syncCartWithMenu } = useCart()
+  const scrollToDishesAfterFilter = useRef(false)
+  const { addItem, increment, decrement, items, syncCartWithMenu, itemCount, isOpen: cartOpen } =
+    useCart()
 
   useEffect(() => {
     let cancelled = false
@@ -308,7 +302,13 @@ export function MenuPage() {
   }, [syncCartWithMenu])
 
   const filters = useMemo(
-    () => [{ id: "all", label: "All" }, ...sections.map((s) => ({ id: s.id, label: s.title }))],
+    () => [
+      { id: "all", label: "All" },
+      ...sections.map((s) => ({
+        id: s.id,
+        label: MENU_CATEGORY_CHIP[s.title] ?? s.title,
+      })),
+    ],
     [sections],
   )
 
@@ -317,16 +317,68 @@ export function MenuPage() {
     return sections.filter((section) => section.id === filter)
   }, [filter, sections])
 
-  const visibleItems = useMemo(
-    () => visibleSections.flatMap((section) => section.items.map((item) => ({ section, item }))),
-    [visibleSections],
-  )
+  const visibleItems = useMemo(() => {
+    // Avoid listing signature dishes twice in the photo grid when browsing All.
+    const source =
+      filter === "all"
+        ? visibleSections.filter((section) => section.id !== slugify(SIGNATURE_CATEGORY))
+        : visibleSections
+    const seen = new Set<string>()
+    const rows: { section: MenuSection; item: DisplayItem }[] = []
+    for (const section of source) {
+      for (const item of section.items) {
+        if (seen.has(item.id)) continue
+        seen.add(item.id)
+        rows.push({ section, item })
+      }
+    }
+    return rows
+  }, [filter, visibleSections])
+
+  const wholeMenuSections = useMemo(() => {
+    const seen = new Set<string>()
+    const result: MenuSection[] = []
+    // `sections` is already in MENU_CATEGORY_ORDER (meal-flow: food → sweet → barista).
+    for (const section of sections) {
+      if (section.id === slugify(SIGNATURE_CATEGORY)) continue
+      const items = section.items.filter((item) => {
+        if (seen.has(item.id)) return false
+        seen.add(item.id)
+        return true
+      })
+      if (!items.length) continue
+      result.push({ ...section, items })
+    }
+    return result
+  }, [sections])
 
   useEffect(() => {
     setFilterVisible(false)
     const t = window.setTimeout(() => setFilterVisible(true), 40)
     return () => window.clearTimeout(t)
   }, [filter, view])
+
+  useEffect(() => {
+    if (view === "whole") setCategoryOpen(false)
+  }, [view])
+
+  // After picking a category, land on the first dish — not the footer.
+  useEffect(() => {
+    if (!scrollToDishesAfterFilter.current) return
+    scrollToDishesAfterFilter.current = false
+    const t = window.setTimeout(() => {
+      const el = document.getElementById("menu-dishes")
+      if (!el) return
+      const lenis = getLenis()
+      if (lenis) {
+        lenis.scrollToElement(el, -140)
+      } else {
+        const y = el.getBoundingClientRect().top + window.scrollY - 140
+        window.scrollTo({ top: Math.max(0, y), behavior: "smooth" })
+      }
+    }, 80)
+    return () => window.clearTimeout(t)
+  }, [filter, visibleItems, visibleSections])
 
   const handleAdd = (sectionId: string, sectionTitle: string, item: DisplayItem) => {
     addItem({
@@ -350,12 +402,17 @@ export function MenuPage() {
     window.setTimeout(() => setJustAdded((cur) => (cur === id ? null : cur)), 500)
   }
 
-  return (
-    <div className="paper-bg relative min-h-screen">
-      <div className="pointer-events-none absolute inset-0 opacity-[0.35] grain" aria-hidden />
+  const selectCategory = (id: string) => {
+    scrollToDishesAfterFilter.current = true
+    setFilter(id)
+    setCategoryOpen(false)
+    if (view !== "photos") setView("photos")
+  }
 
+  return (
+    <div className="relative min-h-screen">
       {/* Title lives above sticky filters so it never slides underneath them */}
-      <section className="relative px-4 pb-2 pt-24 sm:px-5 md:px-8 md:pt-28">
+      <section className="relative px-4 pb-0 pt-24 sm:px-5 md:px-8 md:pt-28">
         <div className="relative mx-auto max-w-[1180px]">
           {view === "photos" ? (
             <PageIntro className="mb-5 md:mb-6">
@@ -380,54 +437,47 @@ export function MenuPage() {
         </div>
       </section>
 
-      <div className="menu-toolbar sticky top-16 z-30 md:top-[4.25rem]">
-        <div className="mx-auto flex max-w-[1180px] flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5 md:px-8">
-          <div
-            id="menu-filters"
-            className="flex gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          >
-            {filters.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setFilter(item.id)}
-                className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold chip-3d ${
-                  filter === item.id ? "chip-3d-active" : ""
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
+      <div className="relative mb-1">
+        <Marquee text={site.slogan} />
+      </div>
 
-          <div className="inline-flex self-start rounded-full border border-ink/10 bg-cream p-1 sm:self-auto">
+      <div className="menu-toolbar sticky top-16 z-30 md:top-[4.25rem]">
+        <div className="mx-auto flex max-w-[1180px] items-center justify-center px-4 py-3 sm:px-5 md:px-8">
+          <div className="inline-flex shrink-0 items-center rounded-full border border-ink/10 bg-cream/90 p-1 shadow-[0_8px_24px_rgba(50,38,27,0.06)]">
             <button
               type="button"
               onClick={() => setView("photos")}
-              className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition ${
+              className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-2 text-xs font-semibold transition ${
                 view === "photos" ? "bg-ink-deep text-cream" : "text-burgundy"
               }`}
               aria-pressed={view === "photos"}
             >
-              <LayoutGrid size={14} />
+              <LayoutGrid size={14} className="shrink-0" />
               Photos
             </button>
             <button
               type="button"
-              onClick={() => setView("whole")}
-              className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition ${
+              onClick={() => {
+                setView("whole")
+                setFilter("all")
+              }}
+              className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-2 text-xs font-semibold transition ${
                 view === "whole" ? "bg-ink-deep text-cream" : "text-burgundy"
               }`}
               aria-pressed={view === "whole"}
             >
-              <List size={14} />
+              <List size={14} className="shrink-0" />
               Whole menu
             </button>
           </div>
         </div>
       </div>
 
-      <section className="relative px-4 pb-28 pt-6 sm:px-5 md:px-8 md:pb-32 md:pt-8">
+      <section
+        className={`relative px-4 pb-28 pt-6 sm:px-5 md:px-8 md:pb-32 md:pt-8 ${
+          view === "whole" ? "paper-bg" : ""
+        }`}
+      >
         <div className="relative mx-auto max-w-[1180px]">
           {refreshing && (
             <p className="mb-4 text-xs text-ink-muted" aria-live="polite">
@@ -451,7 +501,7 @@ export function MenuPage() {
           )}
 
           <div
-            id="menu-list"
+            id="menu-dishes"
             className={`transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
               filterVisible ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
             }`}
@@ -482,6 +532,11 @@ export function MenuPage() {
                           </span>
                         </div>
                         <p className="mt-1.5 text-sm leading-relaxed text-ink-muted">{item.note}</p>
+                        {item.nutritionLabel ? (
+                          <p className="mt-1.5 text-[0.68rem] font-semibold tracking-[0.06em] text-gold/90">
+                            {item.nutritionLabel}
+                          </p>
+                        ) : null}
                         <div className="mt-3 flex items-center justify-between gap-3">
                           <p className="text-[0.68rem] font-semibold tracking-[0.12em] text-ink-muted">
                             {item.tags.join(" · ")}
@@ -502,7 +557,7 @@ export function MenuPage() {
               </div>
             ) : (
               <WholeMenu
-                sections={visibleSections}
+                sections={wholeMenuSections}
                 qtyFor={qtyFor}
                 justAdded={justAdded}
                 onDecrement={(id) => decrement(id)}
@@ -513,6 +568,78 @@ export function MenuPage() {
           </div>
         </div>
       </section>
+
+      {/* Category FAB — photos view only; whole menu is a flat list */}
+      {view === "photos" && categoryOpen ? (
+        <button
+          type="button"
+          className="fixed inset-0 z-[45] bg-ink-deep/35 backdrop-blur-[2px]"
+          aria-label="Close menu categories"
+          onClick={() => setCategoryOpen(false)}
+        />
+      ) : null}
+
+      {view === "photos" ? (
+        <div
+          className={`pointer-events-none fixed right-4 z-[46] flex flex-col items-end gap-3 ${
+            itemCount > 0 && !cartOpen
+              ? "bottom-[calc(5.75rem+env(safe-area-inset-bottom))]"
+              : "bottom-[max(1.25rem,env(safe-area-inset-bottom))]"
+          }`}
+        >
+          {categoryOpen ? (
+            <div
+              className="menu-fab-sheet pointer-events-auto w-[min(18rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-ink/10 bg-cream shadow-[0_18px_48px_rgba(50,38,27,0.28)]"
+              role="dialog"
+              id="menu-filters"
+              aria-label="Menu categories"
+            >
+              <div className="border-b border-ink/8 px-4 py-3">
+                <p className="text-[0.68rem] font-semibold tracking-[0.16em] text-burgundy">
+                  BROWSE MENU
+                </p>
+              </div>
+              <ul className="max-h-[min(55vh,22rem)] overflow-y-auto py-1.5">
+                {filters.map((item) => {
+                  const active = filter === item.id
+                  return (
+                    <li key={item.id}>
+                      <button
+                        type="button"
+                        onClick={() => selectCategory(item.id)}
+                        className={`flex w-full items-center justify-between px-4 py-3 text-left text-sm transition ${
+                          active
+                            ? "bg-burgundy/10 font-semibold text-burgundy"
+                            : "text-ink-deep hover:bg-wash"
+                        }`}
+                      >
+                        <span>{item.label}</span>
+                        {active ? (
+                          <span className="text-[0.65rem] font-semibold tracking-[0.12em] text-burgundy">
+                            VIEWING
+                          </span>
+                        ) : null}
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={() => setCategoryOpen((open) => !open)}
+            className="menu-fab pointer-events-auto inline-flex items-center gap-2 rounded-full px-4 py-3.5 text-sm font-semibold text-cream shadow-[0_12px_32px_rgba(50,38,27,0.28)] transition active:scale-95"
+            aria-expanded={categoryOpen}
+            aria-controls="menu-filters"
+            aria-label={categoryOpen ? "Close menu categories" : "Open menu categories"}
+          >
+            {categoryOpen ? <X size={18} strokeWidth={2.2} /> : <UtensilsCrossed size={18} strokeWidth={2} />}
+            {categoryOpen ? "Close" : "Menu"}
+          </button>
+        </div>
+      ) : null}
     </div>
   )
 }

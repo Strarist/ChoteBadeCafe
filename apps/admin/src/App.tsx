@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import type {
+  MemoryPin,
   OrderDetail,
   StaffLoginResponse,
   StaffRole,
   StaffUser,
 } from '@cafe/shared-types';
 import { ROLE_PERMISSIONS } from '@cafe/shared-types';
+import { mediaUrl } from '../../../packages/frontend-api.ts';
 import { api } from './api';
 
-type Tab = 'integrations' | 'orders' | 'staff';
+type Tab = 'integrations' | 'orders' | 'staff' | 'memory';
 
 type MeResponse = {
   staff: { staffUserId: string; name: string; role: StaffRole };
@@ -29,6 +31,10 @@ export default function App() {
   const [integrations, setIntegrations] = useState<unknown>(null);
   const [orders, setOrders] = useState<OrderDetail[]>([]);
   const [staff, setStaff] = useState<StaffUser[]>([]);
+  const [memories, setMemories] = useState<MemoryPin[]>([]);
+  const [memoryFilter, setMemoryFilter] = useState<'pending' | 'approved' | 'rejected' | 'all'>(
+    'pending',
+  );
   const [newStaff, setNewStaff] = useState({ name: '', role: 'cashier' as StaffRole, pin: '' });
 
   const perms = me?.permissions;
@@ -74,6 +80,12 @@ export default function App() {
     setMe(null);
   };
 
+  const refreshMemories = async () => {
+    if (!token) return;
+    const q = memoryFilter === 'all' ? '' : `?status=${memoryFilter}`;
+    setMemories(await api<MemoryPin[]>(`/admin/memory${q}`, { token }));
+  };
+
   useEffect(() => {
     if (!token) return;
     void api<MeResponse>('/admin/me', { token })
@@ -95,12 +107,25 @@ export default function App() {
     if (tab === 'staff' && perms?.manageStaff) {
       void api<StaffUser[]>('/admin/staff', { token }).then(setStaff).catch((e) => setError(String(e)));
     }
-  }, [token, me, tab, perms?.viewIntegrations, perms?.viewAllOrders, perms?.manageStaff]);
+    if (tab === 'memory' && perms?.moderateMemory) {
+      void refreshMemories().catch((e) => setError(String(e)));
+    }
+  }, [
+    token,
+    me,
+    tab,
+    memoryFilter,
+    perms?.viewIntegrations,
+    perms?.viewAllOrders,
+    perms?.manageStaff,
+    perms?.moderateMemory,
+  ]);
 
   const tabs = useMemo(() => {
     const list: Array<{ id: Tab; label: string; show: boolean }> = [
       { id: 'integrations', label: 'Integrations', show: Boolean(perms?.viewIntegrations) },
       { id: 'orders', label: 'Orders', show: Boolean(perms?.viewAllOrders) },
+      { id: 'memory', label: 'Memory Wall', show: Boolean(perms?.moderateMemory) },
       { id: 'staff', label: 'Staff', show: Boolean(perms?.manageStaff) },
     ];
     return list.filter((t) => t.show);
@@ -272,6 +297,136 @@ export default function App() {
                 </div>
               </li>
             ))}
+          </ul>
+        </section>
+      )}
+
+      {tab === 'memory' && perms?.moderateMemory && (
+        <section className="card">
+          <div className="row">
+            <h2>Memory Wall moderation</h2>
+            <div className="actions">
+              {(['pending', 'approved', 'rejected', 'all'] as const).map((f) => (
+                <button
+                  key={f}
+                  type="button"
+                  className={memoryFilter === f ? 'primary' : ''}
+                  onClick={() => setMemoryFilter(f)}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+          </div>
+          <p className="muted">
+            Accept, reject, staff-pick, or delete. Guests only see approved pins.
+          </p>
+          <ul className="list">
+            {memories.map((m) => (
+              <li key={m.id}>
+                <div className="row" style={{ alignItems: 'flex-start', gap: '1rem' }}>
+                  <img
+                    src={mediaUrl(m.imageUrl)}
+                    alt=""
+                    style={{ width: 96, height: 72, objectFit: 'cover', borderRadius: 8 }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <strong>{m.names}</strong> · {m.status}
+                    {m.staffPick ? ' · staff pick' : ''}
+                    <p className="muted">{m.story}</p>
+                    {m.rejectReason ? <p className="error">Reject: {m.rejectReason}</p> : null}
+                    <div className="actions">
+                      {m.status !== 'approved' && (
+                        <button
+                          type="button"
+                          disabled={busyKey === `accept:${m.id}`}
+                          onClick={() =>
+                            void runAction(
+                              `accept:${m.id}`,
+                              async () => {
+                                await api(`/admin/memory/${m.id}/accept`, {
+                                  method: 'POST',
+                                  token,
+                                  body: { staffPick: false },
+                                });
+                                await refreshMemories();
+                              },
+                              'Accepted',
+                            )
+                          }
+                        >
+                          Accept
+                        </button>
+                      )}
+                      {m.status === 'approved' && (
+                        <button
+                          type="button"
+                          disabled={busyKey === `pick:${m.id}`}
+                          onClick={() =>
+                            void runAction(
+                              `pick:${m.id}`,
+                              async () => {
+                                await api(`/admin/memory/${m.id}/staff-pick`, {
+                                  method: 'PATCH',
+                                  token,
+                                  body: { staffPick: !m.staffPick },
+                                });
+                                await refreshMemories();
+                              },
+                              m.staffPick ? 'Removed staff pick' : 'Marked staff pick',
+                            )
+                          }
+                        >
+                          {m.staffPick ? 'Unpick' : 'Staff pick'}
+                        </button>
+                      )}
+                      {m.status !== 'rejected' && (
+                        <button
+                          type="button"
+                          disabled={busyKey === `reject:${m.id}`}
+                          onClick={() =>
+                            void runAction(
+                              `reject:${m.id}`,
+                              async () => {
+                                await api(`/admin/memory/${m.id}/reject`, {
+                                  method: 'POST',
+                                  token,
+                                  body: { reason: 'Not a fit for the wall' },
+                                });
+                                await refreshMemories();
+                              },
+                              'Rejected',
+                            )
+                          }
+                        >
+                          Reject
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        disabled={busyKey === `del:${m.id}`}
+                        onClick={() =>
+                          void runAction(
+                            `del:${m.id}`,
+                            async () => {
+                              await api(`/admin/memory/${m.id}`, {
+                                method: 'DELETE',
+                                token,
+                              });
+                              await refreshMemories();
+                            },
+                            'Deleted',
+                          )
+                        }
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </li>
+            ))}
+            {!memories.length && <li className="muted">No pins in this filter.</li>}
           </ul>
         </section>
       )}

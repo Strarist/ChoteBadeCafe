@@ -37,3 +37,6 @@ services:
         sync: false
       - key: PETPOOJA_WEBHOOK_SECRET
         generateValue: true
+      - key: PUBLIC_API_URL
+        sync: false
+      # After PetPooja keys arrive: set PETPOOJA_* secrets, PUBLIC_API_URL, then PETPOOJA_ADAPTER=live

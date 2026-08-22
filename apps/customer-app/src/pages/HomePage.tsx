@@ -6,7 +6,7 @@ import { Appear, EmergeLine, PageIntro } from "../components/MotionText"
 import { Reveal } from "../components/Reveal"
 import { useTilt } from "../hooks/useTilt"
 import { useOrderNow } from "../hooks/useOrderNow"
-import { images, pillars } from "../data/site"
+import { images, pillars, site } from "../data/site"
 
 const iconMap = {
   coffee: Coffee,
@@ -42,7 +42,22 @@ export function HomePage() {
           onAnimationEnd={() => setCurtain(false)}
         />
       ) : null}
-      <section className="relative overflow-hidden pt-24 md:pt-32">
+      <div className="pt-16 md:pt-[4.25rem]">
+        <div className="relative z-10 border-b border-burgundy/10 bg-burgundy px-4 py-2.5 text-center text-cream">
+          <Link
+            to="/visit"
+            className="inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 text-[0.78rem] font-semibold tracking-wide transition hover:text-cream/90"
+          >
+            <span className="uppercase tracking-[0.14em] text-cream/70">We are open</span>
+            <span aria-hidden>·</span>
+            <span>
+              {site.opening.dateLabel} · {site.opening.timeLabel}
+            </span>
+            <span className="text-cream/80">Details →</span>
+          </Link>
+        </div>
+      </div>
+      <section className="relative overflow-hidden pt-10 md:pt-16">
         <div
           className="pointer-events-none absolute -left-32 top-24 h-72 w-72 rounded-full bg-burgundy/10 blur-3xl"
           aria-hidden
@@ -81,7 +96,7 @@ export function HomePage() {
               ref={tiltRef}
               className="arch-frame media-card relative aspect-[3/4.1] bg-[#ded9ce] shadow-[0_28px_70px_rgba(50,38,27,0.16)] will-change-transform md:aspect-[3/4.35]"
             >
-              <div className="img-pop hero-photo absolute inset-0">
+              <div className="hero-photo absolute inset-0 overflow-hidden">
                 <img
                   src={images.heroInterior}
                   alt="Warm arched interior of Chote Bade Café"
@@ -90,9 +105,9 @@ export function HomePage() {
                   decoding="async"
                 />
               </div>
-              <span className="steam left-[42%] bottom-[58%] hidden sm:block" style={{ animationDelay: "0s" }} />
-              <span className="steam left-[48%] bottom-[56%] hidden sm:block" style={{ animationDelay: "1.1s" }} />
-              <span className="steam left-[54%] bottom-[59%] hidden sm:block" style={{ animationDelay: "2.1s" }} />
+              <span className="steam left-[42%] bottom-[58%]" style={{ animationDelay: "0s" }} />
+              <span className="steam left-[48%] bottom-[56%]" style={{ animationDelay: "1.1s" }} />
+              <span className="steam left-[54%] bottom-[59%]" style={{ animationDelay: "2.1s" }} />
             </div>
             <div
               className="pointer-events-none absolute -bottom-6 -left-6 size-24 rounded-full border border-burgundy/20 md:-bottom-8 md:-left-8 md:size-28"
@@ -106,7 +121,7 @@ export function HomePage() {
         </div>
       </section>
 
-      <Marquee text="chota sa break, bada sa sukoon" />
+      <Marquee text={site.slogan} />
 
       <section className="section-wash relative px-5 py-20 md:px-8 md:py-28">
         <div className="mx-auto max-w-[1400px]">

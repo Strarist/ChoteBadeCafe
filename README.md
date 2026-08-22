@@ -63,7 +63,7 @@ pnpm --filter @cafe/counter-pos dev
 
 | Integration | Fake (dev default) | Live prep |
 |---|---|---|
-| PetPooja | `PETPOOJA_ADAPTER=fake` | Set credentials + `PETPOOJA_ADAPTER=live` + `PETPOOJA_WEBHOOK_SECRET`; HTTP push still fails until partner docs wired |
+| PetPooja | `PETPOOJA_ADAPTER=fake` | Set `PETPOOJA_APP_KEY` / `APP_SECRET` / `ACCESS_TOKEN` / `REST_ID` + `PUBLIC_API_URL` + webhook secret, then `PETPOOJA_ADAPTER=live`. Callbacks: `/petpooja/webhooks/order-status` + `/petpooja/webhooks/push-menu` |
 | Razorpay | `PAYMENT_ADAPTER=fake` | Set `RAZORPAY_KEY_ID` / `KEY_SECRET` / `WEBHOOK_SECRET` + `PAYMENT_ADAPTER=live`; configure webhook events (`payment.captured`, `payment.failed`, `order.paid`); see [DEPLOY.md](./DEPLOY.md) |
 | WhatsApp/SMS | `NOTIFICATION_ADAPTER=fake` | Set BSP + SMS keys + `NOTIFICATION_ADAPTER=live` (impl pending provider choice) |
 

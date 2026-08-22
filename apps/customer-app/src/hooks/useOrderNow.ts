@@ -19,7 +19,9 @@ export function useOrderNow() {
       return
     }
     const target =
-      document.getElementById("menu-list") ?? document.getElementById("menu-filters")
+      document.getElementById("menu-dishes") ??
+      document.getElementById("menu-filters") ??
+      document.getElementById("menu-list")
     if (target) {
       const top = target.getBoundingClientRect().top + window.scrollY - 96
       const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches

@@ -29,6 +29,11 @@ const CONTENT_PATTERNS = [
   { name: 'Razorpay test key', re: /rzp_test_[A-Za-z0-9]+/ },
   { name: 'Stripe live key', re: /sk_live_[A-Za-z0-9]+/ },
   { name: 'AWS access key', re: /AKIA[0-9A-Z]{16}/ },
+  // Real PetPooja tokens are opaque; flag suspiciously long non-example secrets in tracked files
+  {
+    name: 'possible hardcoded DATABASE_URL password',
+    re: /DATABASE_URL=postgres(?:ql)?:\/\/[^:\s]+:(?!cafe(?:@|"))[^@\s]{8,}@/i,
+  },
 ];
 
 const MUST_BE_IGNORED = [

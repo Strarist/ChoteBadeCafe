@@ -6,7 +6,7 @@ export interface PetPoojaPushResult {
 }
 
 /**
- * Only place that knows PetPooja's paid-order request shape (§9 — real HTTP deferred).
+ * Port for pushing a paid/confirmed cafe order into PetPooja POS (save_order).
  */
 export interface PetPoojaOrderPush {
   pushOrder(order: OrderDetail): Promise<PetPoojaPushResult>;

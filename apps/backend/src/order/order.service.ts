@@ -60,6 +60,7 @@ export class OrderService {
 
     const resolved = await this.resolveAvailableItems(input.items);
 
+    const tableId = this.normalizeTableId(input.tableId);
     const token = await this.tokens.nextToken();
     const customer = await this.prisma.customer.create({
       data: {
@@ -84,7 +85,7 @@ export class OrderService {
             ? PaymentStatus.paid
             : PaymentStatus.pending,
         customerId: customer.id,
-        tableId: input.tableId ?? null,
+        tableId,
         items: {
           create: resolved.map((item) => ({
             menuItemId: item.menuItemId,
@@ -544,6 +545,30 @@ export class OrderService {
     return detail.totalAmount;
   }
 
+  /** When TABLE_IDS is set, only those IDs may be attached to QR/counter orders. */
+  private normalizeTableId(raw?: string | null): string | null {
+    const value = raw?.trim() || null;
+    if (!value) return null;
+    const allow = (process.env.TABLE_IDS ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (!allow.length) {
+      if (process.env.NODE_ENV === 'production') {
+        this.logger.warn(
+          'TABLE_IDS is empty in production — any tableId string is accepted. Set TABLE_IDS=T1,T2,…',
+        );
+      }
+      return value;
+    }
+    if (!allow.includes(value)) {
+      throw new BadRequestException(
+        `Unknown table "${value}". Scan a cafe QR or ask staff for help.`,
+      );
+    }
+    return value;
+  }
+
   private async resolveAvailableItems(
     items: Array<{
       menuItemId: string;
@@ -617,6 +642,7 @@ export class OrderService {
         name: item.menuItem.name,
         price: item.menuItem.price,
         category: item.menuItem.category,
+        petpoojaItemId: item.menuItem.petpoojaItemId,
       },
       lineTotal: item.menuItem.price * item.quantity,
     }));

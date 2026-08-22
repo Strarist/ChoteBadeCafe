@@ -38,6 +38,8 @@ prisma/*.db
 prisma/*.db-journal
 *.dump
 backup-*.sql
+uploads/
+apps/backend/uploads/
 *.sql.gz
 
 # Editors & OS
@@ -57,6 +59,25 @@ docs/
 **/SITE_HARDENING_REPORT.md
 **/LOGO_*_REPORT.md
 **/LOGO_*_PLAN.md
+**/*_REPORT.md
+**/*_PLAN.md
+**/*_NOTES.md
+**/NOTES.md
+**/TODO.md
+**/WALKTHROUGH.md
+
+# Scaffold READMEs from create-* templates (root README + DEPLOY* are enough)
+apps/backend/README.md
+apps/counter-pos/README.md
+apps/*/README.md
+!apps/customer-app/README.md
+
+# Generated / local tooling noise
+packages/database/src/generated/
+apps/backend/dist/
+*.tmp*
+query_engine-*.node
+query_engine-*.dll.node*
 
 # Docker / Caddy leftovers if someone runs compose on the host
 caddy_data/

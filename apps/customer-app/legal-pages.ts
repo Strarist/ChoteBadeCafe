@@ -70,7 +70,12 @@ export function renderContactHtml() {
     <h2>Address</h2>
     <p><a href="${esc(site.mapsUrl)}">${esc(site.addressFull)}</a></p>
     <h2>Phone</h2>
-    <p><a href="tel:${esc(site.phone.replace(/\s/g, ""))}">${esc(site.phone)}</a></p>
+    <p>${site.phones
+      .map(
+        (phone) =>
+          `<a href="tel:${esc(phone.replace(/\s/g, ""))}">${esc(phone)}</a>`,
+      )
+      .join(" · ")}</p>
     <h2>Email</h2>
     <p><a href="mailto:${esc(site.email)}">${esc(site.email)}</a></p>
     <h2>Hours</h2>

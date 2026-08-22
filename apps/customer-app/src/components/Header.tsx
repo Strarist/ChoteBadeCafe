@@ -12,7 +12,13 @@ export function Header() {
   const orderNow = useOrderNow()
   const location = useLocation()
   const navRef = useRef<HTMLElement>(null)
-  const [pill, setPill] = useState({ left: 0, width: 0, ready: false })
+  const [pill, setPill] = useState({
+    left: 0,
+    top: 0,
+    width: 0,
+    height: 0,
+    ready: false,
+  })
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12)
@@ -56,17 +62,22 @@ export function Header() {
     const linkBox = active.getBoundingClientRect()
     setPill({
       left: linkBox.left - navBox.left,
+      top: linkBox.top - navBox.top,
       width: linkBox.width,
+      height: linkBox.height,
       ready: true,
     })
   }
 
   useLayoutEffect(() => {
     updatePill()
+    const id = window.requestAnimationFrame(() => updatePill())
+    return () => window.cancelAnimationFrame(id)
   }, [location.pathname, open])
 
   useEffect(() => {
     window.addEventListener("resize", updatePill)
+    void document.fonts?.ready?.then(() => updatePill())
     return () => window.removeEventListener("resize", updatePill)
   }, [])
 
@@ -77,16 +88,22 @@ export function Header() {
           scrolled || open ? "site-header-scrolled" : ""
         }`}
       >
-        <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between gap-3 px-5 md:h-[4.25rem] md:px-8">
-          <Logo />
+        <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between gap-2.5 px-4 sm:gap-3 sm:px-5 md:h-[4.25rem] md:px-8">
+          <Logo size="lg" className="min-w-0" />
 
-          <nav ref={navRef} className="relative hidden items-center gap-0.5 lg:flex">
+          <nav
+            ref={navRef}
+            className="site-nav-glass relative hidden items-center gap-0.5 rounded-full p-1.5 lg:flex"
+            onMouseLeave={updatePill}
+          >
             <span
-              className="nav-pill pointer-events-none absolute top-0 bottom-0 rounded-full bg-burgundy/[0.08]"
+              className={`nav-pill pointer-events-none absolute left-0 top-0 rounded-full ${
+                pill.ready ? "nav-pill-ready" : ""
+              }`}
               style={{
                 width: pill.width,
-                transform: `translateX(${pill.left}px)`,
-                opacity: pill.ready ? 1 : 0,
+                height: pill.height,
+                transform: `translate3d(${pill.left}px, ${pill.top}px, 0)`,
               }}
               aria-hidden
             />
@@ -94,9 +111,23 @@ export function Header() {
               <NavLink
                 key={link.to}
                 to={link.to}
+                onMouseEnter={(e) => {
+                  const nav = navRef.current
+                  const linkEl = e.currentTarget
+                  if (!nav) return
+                  const navBox = nav.getBoundingClientRect()
+                  const linkBox = linkEl.getBoundingClientRect()
+                  setPill({
+                    left: linkBox.left - navBox.left,
+                    top: linkBox.top - navBox.top,
+                    width: linkBox.width,
+                    height: linkBox.height,
+                    ready: true,
+                  })
+                }}
                 className={({ isActive }) =>
-                  `relative z-[1] rounded-full px-3.5 py-2 text-[0.88rem] font-medium tracking-[-0.01em] transition-colors duration-300 ${
-                    isActive ? "text-burgundy" : "text-ink/75 hover:text-burgundy"
+                  `site-nav-link relative z-[1] rounded-full px-3.5 py-2 text-[0.88rem] font-medium tracking-[-0.01em] ${
+                    isActive ? "is-active text-burgundy" : "text-ink/75"
                   }`
                 }
               >
@@ -105,22 +136,22 @@ export function Header() {
             ))}
           </nav>
 
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
             <button
               type="button"
               onClick={orderNow}
-              className="btn-pill btn-clay hidden !px-4 !py-2 text-[0.8rem] lg:inline-flex"
+              className="btn-pill btn-clay !inline-flex !px-4 !py-2.5 text-[0.8rem] leading-none sm:!px-5 sm:!py-2.5 sm:text-[0.875rem]"
             >
               Order Now
             </button>
             <button
               type="button"
-              className="grid size-10 place-items-center rounded-full border border-ink/10 bg-cream-warm/80 text-ink transition hover:border-burgundy/25 hover:bg-burgundy/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burgundy/40 lg:hidden"
+              className="grid size-9 place-items-center rounded-full border border-ink/10 bg-cream-warm/80 text-ink transition hover:border-burgundy/25 hover:bg-burgundy/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-burgundy/40 sm:size-10 lg:hidden"
               aria-label={open ? "Close menu" : "Open menu"}
               aria-expanded={open}
               onClick={() => setOpen((v) => !v)}
             >
-              {open ? <X size={20} /> : <Menu size={20} />}
+              {open ? <X size={18} /> : <Menu size={18} />}
             </button>
           </div>
         </div>
@@ -187,7 +218,7 @@ export function Header() {
                       setOpen(false)
                       orderNow()
                     }}
-                    className="btn-pill btn-clay mt-4 w-full justify-center !py-2.5 text-sm"
+                    className="btn-pill btn-clay mt-4 w-full justify-center !py-3 text-sm"
                   >
                     Order Now
                   </button>

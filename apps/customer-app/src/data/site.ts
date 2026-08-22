@@ -1,3 +1,9 @@
+import {
+  CAFE_MENU_SEED,
+  MENU_CATEGORY_ORDER,
+  SIGNATURE_ITEM_IDS,
+} from "@cafe/shared-types"
+
 export const images = {
   heroInterior:
     "https://images.unsplash.com/photo-1763750759240-a1398573772a?crop=entropy&cs=srgb&fm=jpg&q=85&w=1600",
@@ -18,6 +24,7 @@ export const images = {
     "https://images.unsplash.com/photo-1554118811-1e0d58224f24?crop=entropy&cs=srgb&fm=jpg&q=85&w=700",
 } as const
 
+/** Primary nav */
 export const navLinks = [
   { to: "/story", label: "Our Story" },
   { to: "/menu", label: "Menu" },
@@ -45,8 +52,8 @@ export const pillars = [
   },
   {
     id: "03",
-    title: "Coffee",
-    description: "Single-origin, slow-poured, quietly serious.",
+    title: "Barista",
+    description: "Espresso to frappes — the Chote Bade pour.",
     image: images.coffee,
     to: "/menu",
     icon: "coffee" as const,
@@ -103,59 +110,48 @@ export type MenuItem = {
   note?: string
 }
 
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+}
+
+/** Static mirror of the shared seed — kept for any local references. */
 export const menuSections: {
   id: string
   title: string
   items: MenuItem[]
-}[] = [
-  {
-    id: "coffee",
-    title: "Coffee",
-    items: [
-      { name: "BABA'S ESPRESSO", price: 160, note: "Short, strong, no small talk." },
-      { name: "AMERICANO", price: 180, note: "Long black, quietly certain." },
-      { name: "CORTADO", price: 190, note: "Equal parts heat and hush." },
-      { name: "CAPPUCCINO", price: 210, note: "Foam first, then the day begins." },
-      { name: "CHOTA CORTADO", price: 190, note: "Small cup, big comfort." },
-      { name: "WALNUT STAIRCASE LATTE", price: 240, note: "Toasted walnut, slow climb of warmth." },
-      { name: "COLD SUKOON BREW", price: 220, note: "Steeped overnight. Soft on the nerves." },
-    ],
-  },
-  {
-    id: "milk",
-    title: "Milk Options",
-    items: [
-      { name: "OAT / ALMOND / SOY", price: 50, note: "Plant milk, same ritual." },
-      { name: "FULL CREAM / TONED", price: 0, note: "no extra charge" },
-      { name: "COCONUT WHIP", price: 60, note: "A soft tropical cloud on top." },
-      { name: "HOUSE MALAI", price: 60, note: "made fresh each morning" },
-    ],
-  },
-  {
-    id: "chai",
-    title: "Chai & Tea",
-    items: [
-      { name: "MASALA CHAI", price: 120, note: "Spice, milk, and a long conversation." },
-      { name: "KADAK CUTTING", price: 90, note: "Half a glass. Full of nerve." },
-      { name: "MATCHA", price: 260, note: "Ceremonial grade, whisked slow" },
-      {
-        name: "SYRUPS",
-        price: 40,
-        note: "Vanilla, Caramel, Cardamom, Rose, Walnut, Gulkand",
-      },
-    ],
-  },
-  {
-    id: "seasonal",
-    title: "Seasonal Specials",
-    items: [
-      { name: "TOASTED WALNUT LATTE", price: 250, note: "The seasonal one. Warm, nutty, a little proud." },
-      { name: "ROSE PISTA CLOUD", price: 270, note: "Pink, pistachio, and a little theatre." },
-      { name: "MASALA COLD BREW", price: 230, note: "Spice meeting ice, on purpose." },
-      { name: "FILTER KAAPI FLOAT", price: 240, note: "South Indian filter, a scoop of cool." },
-    ],
-  },
-]
+}[] = (() => {
+  const byCategory = new Map<string, MenuItem[]>()
+  for (const item of CAFE_MENU_SEED) {
+    const list = byCategory.get(item.category) ?? []
+    list.push({
+      name: item.name,
+      price: Math.round(item.price / 100),
+      note: item.description,
+    })
+    byCategory.set(item.category, list)
+  }
+  const signatureItems = CAFE_MENU_SEED.filter((item) =>
+    SIGNATURE_ITEM_IDS.has(item.petpoojaItemId),
+  ).map((item) => ({
+    name: item.name,
+    price: Math.round(item.price / 100),
+    note: item.description,
+  }))
+  const sections = MENU_CATEGORY_ORDER.filter((title) => title !== "SIGNATURE PICKS")
+    .filter((title) => byCategory.has(title))
+    .map((title) => ({
+      id: slugify(title),
+      title,
+      items: byCategory.get(title) ?? [],
+    }))
+  return [
+    { id: "signature", title: "SIGNATURE PICKS", items: signatureItems },
+    ...sections,
+  ]
+})()
 
 export const journalPosts = [
   {
@@ -165,6 +161,11 @@ export const journalPosts = [
       "A note from the counter on roasting slow, toasting nuts, and the cup that started it all.",
     date: "12 Mar 2026",
     image: images.coffee,
+    body: [
+      "We named a latte after the staircase before we finished painting the walls. That should tell you something about how this place got built — feelings first, fixtures second.",
+      "The walnut note isn't syrup for syrup's sake. It's toasted slow, folded into milk that still tastes like milk, and poured over an espresso that can stand up to a little sweetness without disappearing.",
+      "Placeholder draft — swap this essay for the real counter note whenever it's ready. Until then, this slot holds the story shape.",
+    ],
   },
   {
     slug: "sunday-table",
@@ -173,6 +174,11 @@ export const journalPosts = [
       "Empty chairs filled themselves. Here's who showed up, and what they left behind.",
     date: "28 Feb 2026",
     image: images.community,
+    body: [
+      "One free table each week sounded simple on paper. In practice it is a promise: someone who needs a warm seat gets one, no performance required.",
+      "We're still learning who shows up — students between shifts, grandparents waiting on family, strangers who become regulars by the second pour.",
+      "This is a placeholder write-up for opening week. Replace with real Sunday notes, photos, and names (with permission) as the ritual finds its rhythm.",
+    ],
   },
   {
     slug: "bean-story",
@@ -181,32 +187,96 @@ export const journalPosts = [
       "Small batch, big character. How a tiny lot became our house espresso.",
     date: "04 Feb 2026",
     image: images.food,
+    body: [
+      "Chota doesn't mean lesser. The Coorg lot we cup for house espresso is small on purpose — enough to stay fresh, loud enough to taste like somewhere.",
+      "Expect chocolate, a little citrus, and a finish that doesn't need a lecture. If you want the full roast log, ask at the counter — we'll talk your ear off.",
+      "Draft copy for launch. Drop in origin details, roast dates, and barista notes when the first bags land.",
+    ],
+  },
+] as const
+
+export const memoryWallPins = [
+  {
+    id: "1",
+    names: "Aarav & Papa",
+    story: "Half a brownie, one shared cold coffee, and a promise to come back after exams.",
+    image: images.memory1,
+    staffPick: true,
+  },
+  {
+    id: "2",
+    names: "Meher & Nani",
+    story: "She ordered the chai; I ordered the frappe. We swapped halfway, as always.",
+    image: images.memory2,
+    staffPick: false,
+  },
+  {
+    id: "3",
+    names: "Kabir & Coach",
+    story: "Post-practice debrief at the corner table. The fries did not survive.",
+    image: images.memory3,
+    staffPick: true,
+  },
+  {
+    id: "4",
+    names: "Ishaan & Didi",
+    story: "First paycheck treat. She paid. I tipped. Sibling maths.",
+    image: images.community,
+    staffPick: false,
+  },
+  {
+    id: "5",
+    names: "Ananya & Mentor",
+    story: "Interview nerves, two lattes, one pep talk. We are open for those tables.",
+    image: images.food,
+    staffPick: false,
+  },
+  {
+    id: "6",
+    names: "Placeholder pin",
+    story: "Sample memory — replace with a real guest photo and story after opening night.",
+    image: images.heroInterior,
+    staffPick: true,
   },
 ] as const
 
 export const site = {
-  name: "Chote Bade",
-  fullName: "Chote Bade Café",
+  name: "Chote Bade Cafe",
+  fullName: "Chote Bade Cafe",
   tagline: "Chote Moments, Bade Memories.",
+  /** Official line from opening flyer */
+  slogan: "Chota Sa Break, Bada Sa Sukoon",
   mantra: "Walk in. Relax. Enjoy. Good food | Good mood | Great memories.",
-  address: "Shop No. D-49, Rodeo Drive, Near Park Hospital, Sector 49, Gurugram",
+  address: "Unit 49, Block D, Rodeo Drive Arcadia II, South City-2, Gurugram",
   addressFull:
-    "Unit No. 49, Block D, Ground Floor, Rodeo Drive Arcadia II, South City-2, Near Park Hospital, Sector 49, Gurugram, Haryana 122018",
+    "Unit no. 49, Block D, Ground Floor, Rodeo Drive Arcadia II, South City - 2, Gurgaon, Haryana, India - 122018",
   hoursByDay: [
     { days: "Mon – Thu", time: "8:00 am – 11:00 pm" },
     { days: "Fri – Sat", time: "8:00 am – 12:30 am" },
     { days: "Sunday", time: "9:00 am – 11:00 pm" },
   ],
   hours: "Mon–Thu 8am–11pm · Fri–Sat 8am–12:30am · Sun 9am–11pm",
-  phone: "+91 98765 43210",
+  phones: ["+91 9990318188", "+91 7678401469"] as const,
+  /** Combined for policies / plain-text surfaces */
+  phone: "+91 9990318188 / +91 7678401469",
   email: "hello@chotebadecafe.com",
-  website: "https://chotebadecafe.com",
+  website: "https://www.chotebadecafe.com",
   instagram: "@chotebadecafe",
   instagramUrl: "https://www.instagram.com/chotebadecafe/",
   mapsUrl:
-    "https://www.google.com/maps/search/?api=1&query=Unit+No.+49+Block+D+Rodeo+Drive+Arcadia+II+South+City-2+Gurugram+122018",
+    "https://www.google.com/maps/search/?api=1&query=Unit+no.+49+Block+D+Rodeo+Drive+Arcadia+II+South+City-2+Gurgaon+Haryana+122018",
+  mapsEmbedUrl:
+    "https://maps.google.com/maps?q=Unit+no.+49+Block+D+Ground+Floor+Rodeo+Drive+Arcadia+II+South+City-2+Gurgaon+122018&z=16&output=embed",
   cuisines: "Continental, Italian & Mexican",
   deliveryPartners: "Zomato and Swiggy",
+  opening: {
+    label: "Grand opening",
+    dateLabel: "23 Aug 2026 (Sunday)",
+    timeLabel: "6:00 PM",
+    whenIso: "2026-08-23T18:00:00+05:30",
+    chiefGuest: "Mr. Keshav Gurjar",
+    chiefGuestTitle: "General Secretary (Panjab) Samajwadi Party",
+  },
 } as const
 
 export const legalLinks = [

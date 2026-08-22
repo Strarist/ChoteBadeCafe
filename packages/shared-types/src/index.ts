@@ -4,9 +4,9 @@ export type {
   StaffRole,
   StaffLoginResponse,
   StaffSessionPayload,
-} from './staff';
-export { STAFF_ROLES, ROLE_PERMISSIONS } from './staff';
-export type { StaffUser } from './staff';
+} from './staff.js';
+export { STAFF_ROLES, ROLE_PERMISSIONS } from './staff.js';
+export type { StaffUser } from './staff.js';
 
 export type OrderStatus =
   | 'cart_building'
@@ -59,7 +59,10 @@ export interface OrderItem {
 }
 
 export interface OrderItemWithMenu extends OrderItem {
-  menuItem: Pick<MenuItem, 'id' | 'name' | 'price' | 'category'>;
+  menuItem: Pick<
+    MenuItem,
+    'id' | 'name' | 'price' | 'category' | 'petpoojaItemId'
+  >;
   /** Line total in paise. */
   lineTotal: number;
 }
@@ -195,3 +198,15 @@ export interface RazorpayConfirmInput {
   razorpayPaymentId: string;
   razorpaySignature: string;
 }
+
+export {
+  CAFE_MENU_SEED,
+  CANONICAL_MENU_IDS,
+  MENU_CATEGORY_CHIP,
+  MENU_CATEGORY_ORDER,
+  MENU_ITEM_ORDER,
+  SIGNATURE_ITEM_IDS,
+} from './cafeMenu.js';
+export type { CafeMenuSeedItem, MenuCategory } from './cafeMenu.js';
+
+export type { MemoryPin, MemoryPinStatus } from './memory.js';

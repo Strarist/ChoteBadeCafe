@@ -3,7 +3,7 @@ import { staticMenu } from '../data/staticMenu'
 import { api } from './api'
 
 const MEMORY_TTL_MS = 60_000
-const STORAGE_KEY = 'chote-bade-menu-v1'
+const STORAGE_KEY = 'chote-bade-menu-v4'
 const STORAGE_TTL_MS = 7 * 24 * 60 * 60 * 1000
 
 let cached: ApiMenuItem[] | null = null

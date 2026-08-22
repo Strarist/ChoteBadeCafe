@@ -1,6 +1,8 @@
 import { NestFactory } from '@nestjs/core';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
+import { join } from 'node:path';
+import { mkdirSync } from 'node:fs';
 import { AppModule } from './app.module';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { envCorsIsLocalhostOnly, parseCorsOrigins } from './cors.util';
@@ -26,6 +28,12 @@ async function bootstrap() {
       crossOriginEmbedderPolicy: false,
     }),
   );
+
+  const uploadRoot =
+    process.env.MEMORY_UPLOAD_DIR?.trim() || join(process.cwd(), 'uploads', 'memory');
+  mkdirSync(uploadRoot, { recursive: true });
+  const uploadsParent = join(uploadRoot, '..');
+  app.useStaticAssets(uploadsParent, { prefix: '/uploads/' });
 
   const corsOrigins = parseCorsOrigins(process.env.CORS_ORIGINS);
   if (

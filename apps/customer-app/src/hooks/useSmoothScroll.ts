@@ -5,6 +5,8 @@ type LenisController = {
   /** Jump to top instantly — use on route changes */
   scrollToTopImmediate: () => void
   scrollToTop: (duration?: number) => void
+  /** Scroll an element into view under sticky header/toolbar. */
+  scrollToElement: (el: HTMLElement, offsetPx?: number) => void
   stop: () => void
   start: () => void
 }
@@ -30,6 +32,10 @@ function makeNativeController(): LenisController {
       document.body.scrollTop = 0
     },
     scrollToTop: () => window.scrollTo({ top: 0, behavior: "smooth" }),
+    scrollToElement: (el, offsetPx = -130) => {
+      const y = el.getBoundingClientRect().top + window.scrollY + offsetPx
+      window.scrollTo({ top: Math.max(0, y), behavior: "smooth" })
+    },
     stop: () => undefined,
     start: () => undefined,
   }
@@ -69,6 +75,14 @@ export function useSmoothScroll() {
         lenis.scrollTo(0, {
           duration,
           easing: (t) => 1 - Math.pow(1 - t, 3),
+        })
+      },
+      scrollToElement: (el, offsetPx = -130) => {
+        lenis.scrollTo(el, {
+          offset: offsetPx,
+          duration: 0.75,
+          easing: (t) => 1 - Math.pow(1 - t, 3),
+          force: true,
         })
       },
       stop: () => lenis.stop(),

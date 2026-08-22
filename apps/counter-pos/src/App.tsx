@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
-import type { MenuItem, OrderDetail, StaffLoginResponse } from '@cafe/shared-types';
-import { SOCKET_EVENTS } from '@cafe/shared-types';
+import type { MenuItem, OrderDetail, StaffLoginResponse, StaffRole } from '@cafe/shared-types';
+import { ROLE_PERMISSIONS, SOCKET_EVENTS } from '@cafe/shared-types';
 import { api, getAuthToken, setAuthToken } from './lib/api';
 import { loadMenuCache, saveMenuCache } from './lib/menuCache';
 import { useConnectionStatus } from './hooks/useConnectionStatus';
@@ -34,6 +34,11 @@ export default function App() {
   const [authedName, setAuthedName] = useState<string | null>(
     localStorage.getItem('counter-auth-name'),
   );
+  const [staffRole, setStaffRole] = useState<StaffRole | null>(() => {
+    const raw = localStorage.getItem('counter-auth-role');
+    return raw === 'admin' || raw === 'manager' || raw === 'cashier' ? raw : null;
+  });
+  const canRetryPush = staffRole ? ROLE_PERMISSIONS[staffRole].retryPetpoojaPush : false;
   const [tab, setTab] = useState<Tab>('order');
   const [menu, setMenu] = useState<MenuItem[]>([]);
   const [cart, setCart] = useState<
@@ -78,7 +83,9 @@ export default function App() {
       });
       setAuthToken(res.token);
       localStorage.setItem('counter-auth-name', res.staff.name);
+      localStorage.setItem('counter-auth-role', res.staff.role);
       setAuthedName(res.staff.name);
+      setStaffRole(res.staff.role);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
@@ -87,7 +94,9 @@ export default function App() {
   const logout = () => {
     setAuthToken(null);
     localStorage.removeItem('counter-auth-name');
+    localStorage.removeItem('counter-auth-role');
     setAuthedName(null);
+    setStaffRole(null);
   };
 
   const refreshQueues = useCallback(async () => {
@@ -387,7 +396,9 @@ export default function App() {
               ['pay', `Pay (${pendingPay.length})`],
               ['kitchen', `Kitchen (${kitchen.length})`],
               ['ready', `Ready (${ready.length})`],
-              ['push', `Push fails (${pushFailed.length})`],
+              ...(canRetryPush
+                ? ([['push', `Push fails (${pushFailed.length})`]] as const)
+                : []),
             ] as const
           ).map(([id, label]) => (
             <button

@@ -1,82 +1,94 @@
 import { Link } from "react-router-dom"
 
-/** Matches brand mark: gold circle, cup + CB, steam, cloud + wordmark */
-export function Logo({ light = false, withWordmark = true }: { light?: boolean; withWordmark?: boolean }) {
-  const word = light ? "#ede6da" : "#5c2a32"
-  const gold = light ? "#e8d5a3" : "#c9a24b"
-  const cupInk = light ? "#3a2418" : "#5c2a32"
+export interface LogoProps {
+  light?: boolean
+  withWordmark?: boolean
+  size?: "sm" | "md" | "lg" | "xl" | number
+  className?: string
+  asLink?: boolean
+  showTagline?: boolean
+}
 
-  return (
-    <Link to="/" className="logo-mark inline-flex items-center gap-2.5 group" aria-label="Chote Bade home">
-      <svg
-        className="size-10 shrink-0 transition duration-700 group-hover:-translate-y-0.5 md:size-[2.65rem]"
-        viewBox="0 0 64 64"
-        fill="none"
-        aria-hidden
-      >
-        {/* Outer ring */}
-        <circle cx="32" cy="32" r="29.5" stroke={gold} strokeWidth="1.75" />
+/**
+ * Production Chote Bade Café Brand Logo Component
+ * Incorporates the authentic circular medallion emblem and brand wordmark.
+ */
+export function Logo({
+  light = false,
+  withWordmark = true,
+  size = "md",
+  className = "",
+  asLink = true,
+  showTagline = false,
+}: LogoProps) {
+  const wordColor = light ? "#ede6da" : "#5c2a32"
 
-        {/* Soft cloud */}
-        <path
-          d="M26.5 14.2c.4-1.6 1.8-2.7 3.5-2.7 1.1 0 2.1.5 2.8 1.2.5-.3 1.1-.5 1.8-.5 1.7 0 3.1 1.3 3.3 2.9.9.2 1.6.9 1.6 1.9 0 1.1-.9 2-2 2H26.2c-1.2 0-2.1-.9-2.1-2.1 0-1 .7-1.8 1.7-2-.1-.2-.1-.4-.1-.7z"
-          fill={gold}
-        />
+  const sizeClasses = {
+    sm: "size-8 md:size-9",
+    md: "size-10 md:size-11",
+    lg: "size-11 sm:size-12 md:size-[3.25rem]",
+    xl: "size-20 md:size-24",
+  }
 
-        {/* Steam */}
-        <path
-          d="M28.2 22.5c0-2.2-1.2-3.2-1.2-5.2"
-          stroke={gold}
-          strokeWidth="1.5"
-          strokeLinecap="round"
-        />
-        <path
-          d="M32.2 22.2c0-2.6-1.4-3.6-1.4-5.8"
-          stroke={gold}
-          strokeWidth="1.5"
-          strokeLinecap="round"
-        />
-        <path
-          d="M36.2 22.5c0-2.2-1.2-3.2-1.2-5.2"
-          stroke={gold}
-          strokeWidth="1.5"
-          strokeLinecap="round"
-        />
+  const customStyle =
+    typeof size === "number"
+      ? { width: `${size}px`, height: `${size}px` }
+      : undefined
 
-        {/* Cup body */}
-        <path
-          d="M22.5 28.5h16.2c1.2 0 2.2 1 2.2 2.2v8.6c0 3.6-2.9 6.5-6.5 6.5h-7.6c-3.6 0-6.5-2.9-6.5-6.5v-8.6c0-1.2 1-2.2 2.2-2.2z"
-          fill={gold}
+  const webpSrc = light
+    ? "/images/branding/chote-bade-cafe-logo-light.webp"
+    : "/images/branding/chote-bade-cafe-logo.webp"
+
+  const pngSrc = light
+    ? "/images/branding/chote-bade-cafe-logo-light.png"
+    : "/images/branding/chote-bade-cafe-logo.png"
+
+  const content = (
+    <div className={`logo-mark inline-flex items-center gap-2.5 sm:gap-3 group select-none ${className}`}>
+      <picture className="shrink-0 flex items-center justify-center">
+        <source srcSet={webpSrc} type="image/webp" />
+        <img
+          src={pngSrc}
+          alt="Chote Bade Café"
+          className={`object-contain transition-transform duration-500 group-hover:-translate-y-0.5 group-hover:scale-105 ${
+            typeof size === "string" ? sizeClasses[size] : ""
+          }`}
+          style={customStyle}
+          width={size === "sm" ? 36 : size === "lg" ? 52 : size === "xl" ? 96 : 44}
+          height={size === "sm" ? 36 : size === "lg" ? 52 : size === "xl" ? 96 : 44}
+          loading="eager"
+          decoding="async"
         />
-        {/* Handle */}
-        <path
-          d="M40.9 31.2h2.4c2.1 0 3.8 1.7 3.8 3.8v1.4c0 2.1-1.7 3.8-3.8 3.8h-2.4"
-          stroke={gold}
-          strokeWidth="2.2"
-          strokeLinecap="round"
-        />
-        {/* CB letters (negative on cup) */}
-        <text
-          x="32.5"
-          y="40.2"
-          textAnchor="middle"
-          fill={cupInk}
-          style={{
-            fontFamily: "Fraunces, Georgia, serif",
-            fontSize: "11px",
-            fontWeight: 600,
-            letterSpacing: "0.02em",
-          }}
-        >
-          CB
-        </text>
-      </svg>
+      </picture>
 
       {withWordmark && (
-        <span className="logo-wordmark font-display leading-none" style={{ color: word }}>
-          Chote Bade
-        </span>
+        <div className="flex flex-col justify-center min-w-0">
+          <span
+            className="logo-wordmark font-display leading-[1.05] tracking-tight"
+            style={{ color: wordColor }}
+          >
+            Chote Bade Cafe
+          </span>
+          {showTagline && (
+            <span
+              className="mt-1 text-[0.62rem] font-sans font-semibold uppercase tracking-[0.18em]"
+              style={{ color: light ? "rgba(237,230,218,0.7)" : "#8b1e2d" }}
+            >
+              Chote Moments, Bade Memories
+            </span>
+          )}
+        </div>
       )}
-    </Link>
+    </div>
   )
+
+  if (asLink) {
+    return (
+      <Link to="/" className="inline-block" aria-label="Chote Bade Café home">
+        {content}
+      </Link>
+    )
+  }
+
+  return content
 }

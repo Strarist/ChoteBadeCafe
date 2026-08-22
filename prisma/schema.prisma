@@ -173,6 +173,7 @@ model StaffUser {
   lastLoginAt DateTime? @map("last_login_at")
   createdAt   DateTime  @default(now()) @map("created_at")
   statusLogs  OrderStatusLog[]
+  moderatedPins MemoryPin[]
 
   @@map("staff_users")
 }
@@ -201,4 +202,31 @@ model OrderTokenSequence {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@map("order_token_sequences")
+}
+
+enum MemoryPinStatus {
+  pending
+  approved
+  rejected
+}
+
+/// Guest Memory Wall submissions — public sees approved only; admin/manager moderate.
+model MemoryPin {
+  id           String          @id @default(cuid())
+  names        String
+  story        String
+  /// Public URL path under /uploads/memory/…
+  imageUrl     String          @map("image_url")
+  status       MemoryPinStatus @default(pending)
+  staffPick    Boolean         @default(false) @map("staff_pick")
+  createdAt    DateTime        @default(now()) @map("created_at")
+  moderatedAt  DateTime?       @map("moderated_at")
+  moderatedById String?        @map("moderated_by_id")
+  rejectReason String?         @map("reject_reason")
+
+  moderatedBy StaffUser? @relation(fields: [moderatedById], references: [id])
+
+  @@index([status, createdAt])
+  @@index([staffPick])
+  @@map("memory_pins")
 }

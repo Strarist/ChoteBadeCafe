@@ -49,9 +49,17 @@ export function Footer() {
             </li>
             <li className="flex gap-3">
               <Phone size={16} className="mt-0.5 shrink-0 opacity-70" />
-              <a href={`tel:${site.phone.replace(/\s/g, "")}`} className="transition hover:text-cream">
-                {site.phone}
-              </a>
+              <span className="flex flex-col gap-1">
+                {site.phones.map((phone) => (
+                  <a
+                    key={phone}
+                    href={`tel:${phone.replace(/\s/g, "")}`}
+                    className="transition hover:text-cream"
+                  >
+                    {phone}
+                  </a>
+                ))}
+              </span>
             </li>
             <li className="flex gap-3">
               <Mail size={16} className="mt-0.5 shrink-0 opacity-70" />
@@ -78,6 +86,11 @@ export function Footer() {
             <li>
               <Link to="/journal" className="transition hover:text-cream">
                 Journal
+              </Link>
+            </li>
+            <li>
+              <Link to="/memory-wall" className="transition hover:text-cream">
+                Memory Wall
               </Link>
             </li>
             <li>
