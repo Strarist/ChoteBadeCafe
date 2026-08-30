@@ -46,13 +46,20 @@ async function main() {
   const orderAccess = { 'X-Order-Access': order.accessToken };
   console.log({ id: order.id, token: order.token, status: order.status, logs: order.statusLogs.length });
 
-  console.log('4) checkout pay_at_counter');
-  const awaiting = await req(`/orders/${order.id}/checkout`, {
+  console.log('4) checkout pay_at_counter → confirmed + PetPooja push');
+  const confirmed = await req(`/orders/${order.id}/checkout`, {
     method: 'POST',
     headers: orderAccess,
     body: JSON.stringify({ method: 'pay_at_counter' }),
   });
-  console.log({ status: awaiting.status, payment: awaiting.payments[0]?.method });
+  if (confirmed.status !== 'confirmed') {
+    throw new Error(`expected confirmed after COD checkout, got ${confirmed.status}`);
+  }
+  console.log({
+    status: confirmed.status,
+    payment: confirmed.payments[0]?.method,
+    discount: confirmed.discountAmount,
+  });
 
   console.log('5) socket listen briefly');
   await new Promise((resolve, reject) => {
@@ -69,36 +76,23 @@ async function main() {
     });
   });
 
-  console.log('6) confirm counter payment (staff auth)');
-  const login = await req('/auth/staff/login', {
-    method: 'POST',
-    body: JSON.stringify({ name: 'Cashier', pin: '3456' }),
-  });
-  const staffAuth = { Authorization: `Bearer ${login.token}` };
-  const confirmed = await req(`/orders/${order.id}/confirm-counter-payment`, {
-    method: 'POST',
-    headers: staffAuth,
-    body: JSON.stringify({ method: 'cash' }),
-  });
-  console.log({
-    status: confirmed.status,
-    petpoojaOrderId: confirmed.petpoojaOrderId,
-    pushFailed: confirmed.petpoojaPushFailed,
-  });
-
   await new Promise((r) => setTimeout(r, 800));
   const afterPush = await req(`/orders/${order.id}`, { headers: orderAccess });
-  console.log('7) after push', {
+  console.log('6) after push', {
     petpoojaOrderId: afterPush.petpoojaOrderId,
     pushFailed: afterPush.petpoojaPushFailed,
   });
 
-  console.log('8) petpooja ready webhook');
+  console.log('7) petpooja ready webhook');
   const readyPayload = { cafe_order_id: order.id, status: 'food_ready' };
   const readySigned = signPetpooja(readyPayload);
+  const webhookAuth = {
+    Authorization: `Bearer ${PETPOOJA_WEBHOOK_SECRET}`,
+    'x-petpooja-signature': readySigned.sig,
+  };
   const ready = await req('/petpooja/webhooks/order-status', {
     method: 'POST',
-    headers: { 'x-petpooja-signature': readySigned.sig },
+    headers: webhookAuth,
     body: readySigned.raw,
   });
   await new Promise((r) => setTimeout(r, 600));
@@ -110,7 +104,12 @@ async function main() {
     channel: readyAfterNotify.readyNotificationChannel,
   });
 
-  console.log('9) claim + collect');
+  console.log('8) claim + collect (staff)');
+  const login = await req('/auth/staff/login', {
+    method: 'POST',
+    body: JSON.stringify({ name: 'Cashier', pin: '3456' }),
+  });
+  const staffAuth = { Authorization: `Bearer ${login.token}` };
   await req(`/orders/${order.id}/claim`, {
     method: 'POST',
     headers: staffAuth,
@@ -123,7 +122,7 @@ async function main() {
   });
   console.log({ status: collected.status, logs: collected.statusLogs.map((l) => l.status) });
 
-  console.log('10) online payment checkout');
+  console.log('9) online payment checkout');
   const online = await req('/orders', {
     method: 'POST',
     body: JSON.stringify({
@@ -174,7 +173,7 @@ async function main() {
     });
   }
 
-  console.log('11) aggregator stub (signed)');
+  console.log('10) aggregator stub (signed)');
   const aggBody = {
     source: 'swiggy',
     customer: { name: 'Swiggy Guest', mobile: '9000000001' },
@@ -183,7 +182,10 @@ async function main() {
   const aggSigned = signPetpooja(aggBody);
   const agg = await req('/petpooja/webhooks/aggregator-order', {
     method: 'POST',
-    headers: { 'x-petpooja-signature': aggSigned.sig },
+    headers: {
+      Authorization: `Bearer ${PETPOOJA_WEBHOOK_SECRET}`,
+      'x-petpooja-signature': aggSigned.sig,
+    },
     body: aggSigned.raw,
   });
   console.log({ aggStatus: agg.status, source: agg.source, token: agg.token });

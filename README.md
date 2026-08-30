@@ -125,6 +125,9 @@ Optional: `PETPOOJA_CALLBACK_URL` if the status webhook is not `{PUBLIC_API_URL}
 
 ### 3. Tell PetPooja support
 
+Full copy-paste pack (URLs, auth, sample payloads, email draft):
+**[docs/petpooja-partner-handoff.md](docs/petpooja-partner-handoff.md)**
+
 Register these partner URLs (same host as `PUBLIC_API_URL`):
 
 - **Order status:** `/petpooja/webhooks/order-status`

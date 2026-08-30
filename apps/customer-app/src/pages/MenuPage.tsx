@@ -191,6 +191,14 @@ function QtyControls({
   )
 }
 
+function CategoryHeading({ title }: { title: string }) {
+  return (
+    <h2 className="font-display text-[1.45rem] font-semibold leading-none tracking-[-0.02em] text-burgundy sm:text-[1.65rem]">
+      {title}
+    </h2>
+  )
+}
+
 function WholeMenu({
   sections,
   qtyFor,
@@ -207,35 +215,35 @@ function WholeMenu({
   onAdd: (sectionId: string, sectionTitle: string, item: DisplayItem) => void
 }) {
   return (
-    <div className="mx-auto max-w-xl space-y-10">
+    <div className="mx-auto max-w-xl space-y-11">
       {sections.map((sec) => (
         <section key={sec.id}>
-          <h2 className="mb-4 font-mono text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-burgundy">
-            {sec.title}
-          </h2>
+          <div className="mb-5 border-b border-burgundy/20 pb-3">
+            <CategoryHeading title={sec.title} />
+          </div>
           <ul className="space-y-5 sm:space-y-6">
             {sec.items.map((item) => {
               const qty = qtyFor(item.id)
               const added = justAdded === item.id
               return (
-                <li key={item.id} className="border-b border-ink/8 pb-5 last:border-0 last:pb-0">
+                <li key={item.id} className="border-b border-ink/10 pb-5 last:border-0 last:pb-0">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="font-mono text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-ink-deep sm:text-[0.78rem]">
+                      <p className="font-mono text-[0.88rem] font-bold uppercase tracking-[0.06em] text-ink-deep sm:text-[0.95rem]">
                         {item.displayName}
                       </p>
                       {item.note ? (
-                        <p className="mt-1 font-mono text-[0.68rem] leading-relaxed text-ink-muted sm:text-[0.72rem]">
+                        <p className="mt-1.5 font-mono text-[0.8rem] font-medium leading-relaxed text-ink sm:text-[0.85rem]">
                           {item.note}
                         </p>
                       ) : null}
                       {item.nutritionLabel ? (
-                        <p className="mt-1.5 font-mono text-[0.62rem] tracking-[0.04em] text-gold sm:text-[0.65rem]">
+                        <p className="mt-1.5 font-mono text-[0.74rem] font-semibold tracking-[0.03em] text-clay sm:text-[0.78rem]">
                           {item.nutritionLabel}
                         </p>
                       ) : null}
                     </div>
-                    <span className="shrink-0 pt-0.5 font-mono text-[0.72rem] text-ink-deep sm:text-[0.78rem]">
+                    <span className="shrink-0 pt-0.5 font-mono text-[0.88rem] font-bold text-ink-deep sm:text-[0.95rem]">
                       {formatPrice(item.price, item.isAddon)}
                     </span>
                   </div>
@@ -317,23 +325,32 @@ export function MenuPage() {
     return sections.filter((section) => section.id === filter)
   }, [filter, sections])
 
-  const visibleItems = useMemo(() => {
+  const photoSections = useMemo(() => {
     // Avoid listing signature dishes twice in the photo grid when browsing All.
     const source =
       filter === "all"
         ? visibleSections.filter((section) => section.id !== slugify(SIGNATURE_CATEGORY))
         : visibleSections
     const seen = new Set<string>()
-    const rows: { section: MenuSection; item: DisplayItem }[] = []
-    for (const section of source) {
-      for (const item of section.items) {
-        if (seen.has(item.id)) continue
-        seen.add(item.id)
-        rows.push({ section, item })
-      }
-    }
-    return rows
+    return source
+      .map((section) => ({
+        ...section,
+        items: section.items.filter((item) => {
+          if (seen.has(item.id)) return false
+          seen.add(item.id)
+          return true
+        }),
+      }))
+      .filter((section) => section.items.length > 0)
   }, [filter, visibleSections])
+
+  const visibleItems = useMemo(
+    () =>
+      photoSections.flatMap((section) =>
+        section.items.map((item) => ({ section, item })),
+      ),
+    [photoSections],
+  )
 
   const wholeMenuSections = useMemo(() => {
     const seen = new Set<string>()
@@ -507,53 +524,69 @@ export function MenuPage() {
             }`}
           >
             {view === "photos" ? (
-              <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
-                {visibleItems.map(({ section, item }, index) => {
-                  const qty = qtyFor(item.id)
-                  const added = justAdded === item.id
-                  return (
-                    <Reveal key={item.id} delay={Math.min(index * 50, 240)}>
-                      <article className="group">
-                        <div className="menu-photo img-pop aspect-square overflow-hidden bg-wash">
-                          <img
-                            src={item.image}
-                            alt={item.imageAlt}
-                            className="h-full w-full object-cover"
-                            loading={index < 2 ? "eager" : "lazy"}
-                            decoding="async"
-                          />
-                        </div>
-                        <div className="mt-4 flex items-baseline justify-between gap-3">
-                          <h2 className="font-display text-[1.35rem] font-semibold leading-tight tracking-[-0.02em] text-ink-deep sm:text-[1.45rem]">
-                            {item.displayName}
-                          </h2>
-                          <span className="shrink-0 text-sm text-ink-muted">
-                            {formatPrice(item.price, item.isAddon)}
-                          </span>
-                        </div>
-                        <p className="mt-1.5 text-sm leading-relaxed text-ink-muted">{item.note}</p>
-                        {item.nutritionLabel ? (
-                          <p className="mt-1.5 text-[0.68rem] font-semibold tracking-[0.06em] text-gold/90">
-                            {item.nutritionLabel}
-                          </p>
-                        ) : null}
-                        <div className="mt-3 flex items-center justify-between gap-3">
-                          <p className="text-[0.68rem] font-semibold tracking-[0.12em] text-ink-muted">
-                            {item.tags.join(" · ")}
-                          </p>
-                          <QtyControls
-                            itemName={item.displayName}
-                            qty={qty}
-                            added={added}
-                            onDecrement={() => decrement(item.id)}
-                            onIncrement={() => bump(item.id)}
-                            onAdd={() => handleAdd(section.id, section.title, item)}
-                          />
-                        </div>
-                      </article>
-                    </Reveal>
-                  )
-                })}
+              <div className="space-y-14">
+                {photoSections.map((section) => (
+                  <section key={section.id} aria-labelledby={`photo-cat-${section.id}`}>
+                    <div className="mb-6 border-b border-burgundy/15 pb-3">
+                      <h2
+                        id={`photo-cat-${section.id}`}
+                        className="font-display text-[1.55rem] font-semibold leading-none tracking-[-0.02em] text-burgundy sm:text-[1.85rem]"
+                      >
+                        {section.title}
+                      </h2>
+                    </div>
+                    <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+                      {section.items.map((item, index) => {
+                        const qty = qtyFor(item.id)
+                        const added = justAdded === item.id
+                        return (
+                          <Reveal key={item.id} delay={Math.min(index * 50, 240)}>
+                            <article className="group">
+                              <div className="menu-photo img-pop aspect-square overflow-hidden bg-wash">
+                                <img
+                                  src={item.image}
+                                  alt={item.imageAlt}
+                                  className="h-full w-full object-cover"
+                                  loading={index < 2 ? "eager" : "lazy"}
+                                  decoding="async"
+                                />
+                              </div>
+                              <div className="mt-4 flex items-baseline justify-between gap-3">
+                                <h3 className="font-display text-[1.35rem] font-semibold leading-tight tracking-[-0.02em] text-ink-deep sm:text-[1.45rem]">
+                                  {item.displayName}
+                                </h3>
+                                <span className="shrink-0 text-sm font-semibold text-ink-deep">
+                                  {formatPrice(item.price, item.isAddon)}
+                                </span>
+                              </div>
+                              <p className="mt-1.5 text-sm font-medium leading-relaxed text-ink">
+                                {item.note}
+                              </p>
+                              {item.nutritionLabel ? (
+                                <p className="mt-1.5 text-[0.78rem] font-semibold tracking-[0.04em] text-clay">
+                                  {item.nutritionLabel}
+                                </p>
+                              ) : null}
+                              <div className="mt-3 flex items-center justify-between gap-3">
+                                <p className="text-[0.68rem] font-semibold tracking-[0.12em] text-ink-muted">
+                                  {item.tags.join(" · ")}
+                                </p>
+                                <QtyControls
+                                  itemName={item.displayName}
+                                  qty={qty}
+                                  added={added}
+                                  onDecrement={() => decrement(item.id)}
+                                  onIncrement={() => bump(item.id)}
+                                  onAdd={() => handleAdd(section.id, section.title, item)}
+                                />
+                              </div>
+                            </article>
+                          </Reveal>
+                        )
+                      })}
+                    </div>
+                  </section>
+                ))}
               </div>
             ) : (
               <WholeMenu

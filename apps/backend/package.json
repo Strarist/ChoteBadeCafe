@@ -78,7 +78,7 @@
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
     "moduleNameMapper": {
-      "^@cafe/shared-types$": "<rootDir>/../../../packages/shared-types/src/index.ts"
+      "^@cafe/shared-types$": "<rootDir>/../../../packages/shared-types/dist/index.js"
     }
   }
 }

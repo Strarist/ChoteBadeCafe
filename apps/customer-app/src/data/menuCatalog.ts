@@ -214,7 +214,7 @@ const byId: Record<
     tags: ['VEG'],
   },
   'pp-loaded-burger': {
-    photo: 'photo-1543339469-94ba2391431f',
+    photo: 'photo-1583011482205-844cac1d6337',
     imageAlt: 'Loaded vegetarian burger',
     tags: ['VEG'],
   },
@@ -229,8 +229,8 @@ const byId: Record<
     tags: ['VEG'],
   },
   'pp-caesar-salad': {
-    photo: 'photo-1550304943-4f24f54ddde9',
-    imageAlt: 'Caesar salad',
+    photo: 'photo-1622637103261-ae624e188bd0',
+    imageAlt: 'Fresh vegetarian Caesar-style salad',
     tags: ['VEG'],
   },
   'pp-greek-salad': {

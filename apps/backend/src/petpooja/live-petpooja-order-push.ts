@@ -110,7 +110,6 @@ export class LivePetPoojaOrderPush implements PetPoojaOrderPush {
     callbackUrl: string,
   ) {
     const createdOn = formatPetPoojaDateTime(new Date(order.createdAt));
-    const total = paiseToRupeeString(order.totalAmount);
     const paymentType = mapPaymentType(order);
     const orderType = mapOrderType(order);
     const missingIds = order.items.filter((i) => !i.menuItem.petpoojaItemId);
@@ -137,6 +136,27 @@ export class LivePetPoojaOrderPush implements PetPoojaOrderPush {
         item_tax: [],
       };
     });
+
+    const discountPaise = Math.min(
+      Math.max(0, order.discountAmount ?? 0),
+      order.subtotalAmount ?? order.totalAmount,
+    );
+    const payable = Math.max(
+      0,
+      (order.subtotalAmount ?? order.totalAmount + discountPaise) - discountPaise,
+    );
+    const total = paiseToRupeeString(payable);
+    const discountTotal = paiseToRupeeString(discountPaise);
+    const discountDetails =
+      discountPaise > 0
+        ? [
+            {
+              id: order.offerCode ?? 'cbc_offer',
+              title: order.offerLabel ?? 'Spin & Win offer',
+              price: discountTotal,
+            },
+          ]
+        : [];
 
     return {
       app_key: creds.appKey,
@@ -168,10 +188,15 @@ export class LivePetPoojaOrderPush implements PetPoojaOrderPush {
               order_type: orderType,
               payment_type: paymentType,
               table_no: order.tableId ?? '',
-              discount_total: '0.00',
+              discount_total: discountTotal,
               tax_total: '0.00',
               total,
-              description: `CBC token ${order.token}`,
+              description: [
+                `CBC token ${order.token}`,
+                order.offerLabel ? `Offer: ${order.offerLabel}` : null,
+              ]
+                .filter(Boolean)
+                .join(' · '),
               created_on: createdOn,
               enable_delivery: orderType === 'D' ? '1' : '0',
               min_prep_time: '15',
@@ -186,7 +211,7 @@ export class LivePetPoojaOrderPush implements PetPoojaOrderPush {
             details: [],
           },
           Discount: {
-            details: [],
+            details: discountDetails,
           },
         },
       },

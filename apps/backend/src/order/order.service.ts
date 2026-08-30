@@ -22,6 +22,7 @@ import { OrderTokenService } from './order-token.service';
 import { OrderAccessService } from './order-access.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { ALLOWED_ORDER_TRANSITIONS, isPaidKitchenStatus } from './order-status';
+import { resolveOfferPricing } from './offer-pricing';
 
 type OrderInclude = Prisma.OrderGetPayload<{
   include: {
@@ -53,6 +54,9 @@ export class OrderService {
       name?: string | null;
     }>;
     tableId?: string | null;
+    offerCode?: string | null;
+    offerLabel?: string | null;
+    discountAmount?: number;
   }): Promise<OrderDetail> {
     if (!input.items.length) {
       throw new BadRequestException('Order must include at least one item');
@@ -75,6 +79,25 @@ export class OrderService {
         ? 'confirmed'
         : 'cart_building';
 
+    const menuRows = await this.prisma.menuItem.findMany({
+      where: { id: { in: resolved.map((r) => r.menuItemId) } },
+    });
+    const menuById = new Map(menuRows.map((m) => [m.id, m]));
+    const offerLines = resolved.map((item) => {
+      const menu = menuById.get(item.menuItemId)!;
+      return {
+        menuItemId: item.menuItemId,
+        quantity: item.quantity,
+        price: menu.price,
+        category: menu.category,
+        name: menu.name,
+      };
+    });
+    const offer = resolveOfferPricing(input.offerCode, offerLines);
+    const discountAmount = offer.discountAmount;
+    const offerCode = offer.offerCode;
+    const offerLabel = offer.offerLabel;
+
     const order = await this.prisma.order.create({
       data: {
         token,
@@ -86,6 +109,9 @@ export class OrderService {
             : PaymentStatus.pending,
         customerId: customer.id,
         tableId,
+        offerCode,
+        offerLabel,
+        discountAmount,
         items: {
           create: resolved.map((item) => ({
             menuItemId: item.menuItemId,
@@ -221,6 +247,12 @@ export class OrderService {
         status: PaymentRecordStatus.pending,
       },
     });
+
+    // Pay-at-counter: PetPooja has no payment-collected callback — push COD now
+    // and let their POS collect. Online stays awaiting_payment until Razorpay.
+    if (method === 'pay_at_counter') {
+      return this.transition(orderId, 'confirmed', 'system');
+    }
 
     return this.transition(orderId, 'awaiting_payment', 'system');
   }
@@ -646,7 +678,12 @@ export class OrderService {
       },
       lineTotal: item.menuItem.price * item.quantity,
     }));
-    const totalAmount = items.reduce((sum, i) => sum + i.lineTotal, 0);
+    const subtotalAmount = items.reduce((sum, i) => sum + i.lineTotal, 0);
+    const discountAmount = Math.min(
+      Math.max(0, order.discountAmount ?? 0),
+      subtotalAmount,
+    );
+    const totalAmount = Math.max(0, subtotalAmount - discountAmount);
 
     return {
       id: order.id,
@@ -666,6 +703,9 @@ export class OrderService {
       tableId: order.tableId,
       claimLockedUntil: order.claimLockedUntil?.toISOString() ?? null,
       claimLockedBy: order.claimLockedBy,
+      offerCode: order.offerCode ?? null,
+      offerLabel: order.offerLabel ?? null,
+      discountAmount,
       createdAt: order.createdAt.toISOString(),
       updatedAt: order.updatedAt.toISOString(),
       customer: {
@@ -693,6 +733,7 @@ export class OrderService {
         source: l.source,
         timestamp: l.timestamp.toISOString(),
       })),
+      subtotalAmount,
       totalAmount,
     };
   }

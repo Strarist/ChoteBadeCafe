@@ -520,15 +520,15 @@
   }
 
   .paper-bg {
-    background-color: #efe6d8;
+    background-color: #f1e9dc;
     background-image:
-      radial-gradient(ellipse 85% 60% at 15% 5%, rgba(169, 94, 71, 0.07), transparent 50%),
-      radial-gradient(ellipse 60% 45% at 90% 95%, rgba(201, 162, 75, 0.06), transparent 45%),
-      /* fine speckles — old paper flecks, not a grid */
-      url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='s'%3E%3CfeTurbulence type='turbulence' baseFrequency='1.2' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0.35 0 0 0 0 0.25 0 0 0 0 0.16 0 0 0 0.55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23s)'/%3E%3C/svg%3E"),
-      /* soft fiber grain */
-      url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='0.28'/%3E%3C/svg%3E"),
-      linear-gradient(180deg, #f5eee3 0%, #efe6d8 50%, #e9dfd0 100%);
+      radial-gradient(ellipse 85% 60% at 15% 5%, rgba(169, 94, 71, 0.045), transparent 50%),
+      radial-gradient(ellipse 60% 45% at 90% 95%, rgba(201, 162, 75, 0.04), transparent 45%),
+      /* finer speckles — quieter paper flecks */
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='s'%3E%3CfeTurbulence type='turbulence' baseFrequency='2.4' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0.35 0 0 0 0 0.25 0 0 0 0 0.16 0 0 0 0.28 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23s)'/%3E%3C/svg%3E"),
+      /* soft fiber grain — smaller, lighter */
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.6' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='0.14'/%3E%3C/svg%3E"),
+      linear-gradient(180deg, #f6f0e6 0%, #f1e9dc 50%, #ece3d4 100%);
     background-blend-mode: normal, normal, multiply, soft-light, normal;
   }
 
@@ -1246,4 +1246,13 @@
 }
 
 .safe-bottom { padding-bottom: max(1.25rem, env(safe-area-inset-bottom)); }
+
+.spin-title {
+  background: linear-gradient(180deg, #f5e0a0 0%, #d4a84b 48%, #b8862d 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: none;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35));
+}
 

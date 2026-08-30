@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom"
+import { SpinWheelPage } from "./pages/SpinWheelPage"
 import { CartProvider } from "./context/CartContext"
 import { Layout } from "./components/Layout"
 import { HomePage } from "./pages/HomePage"
@@ -20,6 +21,7 @@ export default function App() {
             <Route index element={<HomePage />} />
             <Route path="story" element={<StoryPage />} />
             <Route path="menu" element={<MenuPage />} />
+            <Route path="spin" element={<SpinWheelPage />} />
             <Route path="t/:tableId" element={<TableEntryPage />} />
             <Route path="order/:orderId" element={<OrderStatusPage />} />
             <Route path="journal" element={<JournalPage />} />

@@ -1,7 +1,8 @@
 import type { OrderStatus } from '@cafe/shared-types';
 
 export const ALLOWED_ORDER_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-  cart_building: ['awaiting_payment', 'cancelled'],
+  /** Pay-at-counter submits straight to PetPooja (confirmed); UPI goes awaiting_payment. */
+  cart_building: ['awaiting_payment', 'confirmed', 'cancelled'],
   awaiting_payment: ['payment_failed', 'confirmed', 'cancelled'],
   payment_failed: ['awaiting_payment', 'confirmed', 'cancelled'],
   confirmed: ['preparing', 'cancelled'],

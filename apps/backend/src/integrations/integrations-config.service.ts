@@ -184,7 +184,13 @@ export class IntegrationsConfigService implements OnModuleInit {
   }
 
   petpoojaWebhookSecret(): string | undefined {
-    return stripEnv(this.config.get<string>('PETPOOJA_WEBHOOK_SECRET')) || undefined;
+    const explicit = stripEnv(this.config.get<string>('PETPOOJA_WEBHOOK_SECRET'));
+    if (explicit) return explicit;
+    // Local fake adapter only — production must set PETPOOJA_WEBHOOK_SECRET explicitly.
+    if (this.petpoojaMode() === 'fake') {
+      return 'dev-petpooja-webhook-secret';
+    }
+    return undefined;
   }
 
   getReadiness(): IntegrationReadiness {

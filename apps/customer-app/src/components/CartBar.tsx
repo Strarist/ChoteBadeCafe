@@ -6,7 +6,7 @@ import { useCart } from "../context/CartContext"
  * Header bag removed; this is the sole cart entry on mobile/desktop.
  */
 export function CartBar() {
-  const { itemCount, subtotal, openCart, isOpen } = useCart()
+  const { itemCount, payableTotal, openCart, isOpen } = useCart()
 
   if (itemCount <= 0 || isOpen) return null
 
@@ -16,7 +16,7 @@ export function CartBar() {
         type="button"
         onClick={openCart}
         className="cart-bar pointer-events-auto mx-auto flex w-full max-w-md items-center justify-between gap-3 rounded-2xl px-4 py-3.5 text-left transition active:scale-[0.99] md:max-w-sm"
-        aria-label={`View your table, ${itemCount} items, ₹${subtotal}`}
+        aria-label={`View your table, ${itemCount} items, ₹${payableTotal}`}
       >
         <span className="flex min-w-0 items-center gap-2.5">
           <span className="grid size-9 shrink-0 place-items-center rounded-full bg-cream/15 text-cream ring-1 ring-cream/20">
@@ -31,7 +31,7 @@ export function CartBar() {
         </span>
         <span className="flex shrink-0 items-center gap-2">
           <span className="rounded-full bg-cream px-3.5 py-1.5 text-sm font-semibold text-ink-deep shadow-[0_4px_12px_rgba(0,0,0,0.18)]">
-            ₹{subtotal}
+            ₹{payableTotal}
           </span>
           <span
             className="grid size-9 place-items-center rounded-full bg-cream/20 text-cream ring-1 ring-cream/25"

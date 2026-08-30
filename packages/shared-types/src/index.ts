@@ -8,6 +8,13 @@ export type {
 export { STAFF_ROLES, ROLE_PERMISSIONS } from './staff.js';
 export type { StaffUser } from './staff.js';
 
+export type {
+  OfferCode,
+  OfferDefinition,
+  AppliedOffer,
+} from './offers.js';
+export { OFFER_CATALOG, WHEEL_SEGMENTS } from './offers.js';
+
 export type OrderStatus =
   | 'cart_building'
   | 'awaiting_payment'
@@ -85,6 +92,11 @@ export interface Order {
   tableId: string | null;
   claimLockedUntil: string | null;
   claimLockedBy: string | null;
+  /** Spin-wheel offer code, if any. */
+  offerCode: string | null;
+  offerLabel: string | null;
+  /** Discount in paise applied to the bill. */
+  discountAmount: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -94,7 +106,9 @@ export interface OrderDetail extends Order {
   items: OrderItemWithMenu[];
   payments: Payment[];
   statusLogs: OrderStatusLog[];
-  /** Order total in paise. */
+  /** Gross line total in paise (before discount). */
+  subtotalAmount: number;
+  /** Payable total in paise (subtotal − discount). */
   totalAmount: number;
   /**
    * Opaque capability token for customer order mutations (issued on create only).

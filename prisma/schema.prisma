@@ -107,6 +107,9 @@ model Order {
   readyNotificationStatus  ReadyNotificationStatus?  @map("ready_notification_status")
   readyNotificationChannel ReadyNotificationChannel? @map("ready_notification_channel")
   tableId                  String?                   @map("table_id")
+  offerCode                String?                   @map("offer_code")
+  offerLabel               String?                   @map("offer_label")
+  discountAmount           Int                       @default(0) @map("discount_amount") // paise
   petpoojaPushFailed       Boolean                   @default(false) @map("petpooja_push_failed")
   petpoojaPushError        String?                   @map("petpooja_push_error")
   claimLockedUntil         DateTime?                 @map("claim_locked_until")

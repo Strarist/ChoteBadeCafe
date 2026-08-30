@@ -16,6 +16,11 @@ describe('order status machine', () => {
     expect(canTransition('payment_failed', 'awaiting_payment')).toBe(true);
   });
 
+  it('allows pay-at-counter to submit without awaiting our till', () => {
+    expect(canTransition('cart_building', 'confirmed')).toBe(true);
+    expect(canTransition('cart_building', 'awaiting_payment')).toBe(true);
+  });
+
   it('rejects skipping kitchen steps', () => {
     expect(canTransition('confirmed', 'ready_for_handover')).toBe(false);
     expect(canTransition('confirmed', 'collected')).toBe(false);

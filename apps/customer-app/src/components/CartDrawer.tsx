@@ -31,7 +31,11 @@ export function CartDrawer() {
     removeItem,
     clearCart,
     itemCount,
-    subtotal,
+    payableTotal,
+    discountRupees,
+    offer,
+    offerCode,
+    refreshOffer,
     tableId,
     setItemInstructions,
   } = useCart()
@@ -50,6 +54,11 @@ export function CartDrawer() {
   const [pendingCheckout, setPendingCheckout] = useState<PendingCheckout | null>(null)
 
   const canConfirm = name.trim().length > 0 && mobile.trim().length >= 8
+
+  useEffect(() => {
+    if (!isOpen) return
+    refreshOffer()
+  }, [isOpen, refreshOffer])
 
   useEffect(() => {
     if (!isOpen) return
@@ -284,6 +293,8 @@ export function CartDrawer() {
     setBusy(true)
     setError(null)
     try {
+      refreshOffer()
+      const lines = offer?.orderItems ?? items
       const created = await api.post<OrderDetail>("/orders", {
         source: "qr",
         tableId,
@@ -292,12 +303,15 @@ export function CartDrawer() {
           mobile: mobile.trim(),
           email: email.trim() || null,
         },
-        items: items.map((item) => ({
+        items: lines.map((item) => ({
           menuItemId: item.id,
           name: item.apiName ?? item.name,
           quantity: item.quantity,
           instructions: item.instructions || null,
         })),
+        offerCode: offerCode ?? undefined,
+        discountAmount: offer?.discountAmount ?? 0,
+        offerLabel: offer?.label ?? undefined,
       })
 
       persistPending({
@@ -383,9 +397,9 @@ export function CartDrawer() {
             <div className="space-y-4 text-center cart-success-pop">
               <p className="font-display text-3xl text-burgundy">{placed.token}</p>
               <p className="text-sm text-ink-muted">
-                {placed.status === "confirmed"
-                  ? "Paid — your order is with the kitchen."
-                  : "Pay at the counter when you pick up. We'll call your token."}
+                {placed.paymentStatus === "paid"
+                  ? "Paid online — your order is with the kitchen."
+                  : "Order sent — pay at the counter. Kitchen handles the rest."}
               </p>
               <button
                 type="button"
@@ -395,7 +409,7 @@ export function CartDrawer() {
                   navigate(`/order/${placed.id}`)
                 }}
               >
-                Track order
+                View order
               </button>
             </div>
           )}
@@ -452,7 +466,7 @@ export function CartDrawer() {
                 </Link>
               )}
               <p className="text-sm text-ink-muted">
-                Walk-in pickup · paid before the kitchen starts.
+                Dine-in at your table · pay online or at the counter.
               </p>
               <label className="block text-xs font-semibold tracking-[0.08em] text-burgundy">
                 NAME *
@@ -601,12 +615,19 @@ export function CartDrawer() {
 
           {step === "checkout" && (
             <ul className="mt-4 space-y-2 border-t border-ink/8 pt-4">
-              {items.map((item) => (
-                <li key={item.id} className="flex justify-between text-sm">
-                  <span>
-                    {item.quantity}× {item.name}
+              {(offer?.orderItems ?? items).map((item) => (
+                <li key={item.id} className="flex justify-between gap-3 text-sm">
+                  <span className="min-w-0">
+                    <span className="block font-medium text-ink-deep">
+                      {item.quantity}× {item.name}
+                    </span>
+                    <span className="text-xs text-ink-muted">
+                      ₹{item.price} each · {item.sectionTitle}
+                    </span>
                   </span>
-                  <span>{formatPrice(item.price * item.quantity)}</span>
+                  <span className="shrink-0 tabular-nums">
+                    {formatPrice(item.price * item.quantity)}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -615,21 +636,115 @@ export function CartDrawer() {
 
         {items.length > 0 && (step === "cart" || step === "checkout") && (
           <div className="safe-bottom border-t border-ink/10 bg-cream/95 px-5 py-4 shadow-[0_-16px_40px_rgba(50,38,27,0.08)] md:px-6">
-            <div className="mb-3 flex items-end justify-between">
-              <div>
-                <p className="text-xs tracking-[0.12em] text-ink-muted">SUBTOTAL</p>
-                <p className="mt-0.5 font-display text-2xl text-ink-deep md:text-3xl">{formatPrice(subtotal)}</p>
+            <div className="mb-3 rounded-2xl border border-ink/10 bg-[#faf6ef] px-3.5 py-3">
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-[0.65rem] font-semibold tracking-[0.14em] text-burgundy">
+                  BILL SUMMARY
+                </p>
+                {step === "cart" && (
+                  <button
+                    type="button"
+                    onClick={clearCart}
+                    className="text-[0.7rem] font-medium text-ink-muted"
+                  >
+                    Clear table
+                  </button>
+                )}
               </div>
-              {step === "cart" && (
-                <button
-                  type="button"
-                  onClick={clearCart}
-                  className="text-xs font-medium text-ink-muted"
-                >
-                  Clear table
-                </button>
-              )}
+
+              <div className="space-y-1.5 text-sm">
+                {(offer?.orderItems ?? items).map((item) => {
+                  const cartQty =
+                    items.find((i) => i.id === item.id)?.quantity ?? item.quantity
+                  const freeQty = Math.max(0, item.quantity - cartQty)
+                  const paidQty = item.quantity - freeQty
+                  return (
+                    <div key={item.id}>
+                      {paidQty > 0 && (
+                        <div className="flex justify-between gap-2">
+                          <span className="min-w-0 text-ink-deep">
+                            {paidQty}× {item.name}
+                            <span className="mt-0.5 block text-[0.68rem] text-ink-muted">
+                              @ {formatPrice(item.price)} each
+                            </span>
+                          </span>
+                          <span className="shrink-0 pt-0.5 tabular-nums text-ink-deep">
+                            {formatPrice(item.price * paidQty)}
+                          </span>
+                        </div>
+                      )}
+                      {freeQty > 0 && (
+                        <div className="mt-0.5 flex justify-between gap-2 text-xs text-sage-deep">
+                          <span>
+                            {freeQty}× {item.name} · free with offer
+                          </span>
+                          <span className="tabular-nums">₹0</span>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+
+              <div className="mt-2.5 space-y-1.5 border-t border-ink/10 pt-2.5 text-sm">
+                <div className="flex justify-between text-ink-muted">
+                  <span>Subtotal</span>
+                  <span className="tabular-nums">
+                    {formatPrice(
+                      (offer?.orderItems ?? items).reduce(
+                        (s, i) => s + i.price * i.quantity,
+                        0,
+                      ),
+                    )}
+                  </span>
+                </div>
+                {offerCode && offer && (
+                  <div className="flex justify-between gap-2">
+                    <span className="min-w-0 text-burgundy">Offer · {offer.label}</span>
+                    <span
+                      className={`shrink-0 tabular-nums ${
+                        discountRupees > 0 ? "text-sage-deep" : "text-ink-muted"
+                      }`}
+                    >
+                      {discountRupees > 0 ? `−${formatPrice(discountRupees)}` : "—"}
+                    </span>
+                  </div>
+                )}
+                {offer?.hint && (
+                  <p className="text-[0.7rem] leading-snug text-ink-muted">{offer.hint}</p>
+                )}
+                <div className="flex items-end justify-between border-t border-ink/10 pt-2">
+                  <div>
+                    <p className="text-[0.65rem] font-semibold tracking-[0.12em] text-ink-muted">
+                      AMOUNT TO PAY
+                    </p>
+                    <p className="mt-1 font-display text-2xl leading-none text-burgundy md:text-[1.75rem]">
+                      {formatPrice(payableTotal)}
+                    </p>
+                  </div>
+                  {discountRupees > 0 && (
+                    <p className="pb-0.5 text-sm text-ink-muted line-through tabular-nums">
+                      {formatPrice(
+                        (offer?.orderItems ?? items).reduce(
+                          (s, i) => s + i.price * i.quantity,
+                          0,
+                        ),
+                      )}
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
+
+            {step === "cart" && !offerCode && (
+              <Link
+                to="/spin"
+                onClick={closeCart}
+                className="mb-3 block rounded-xl border border-burgundy/20 bg-burgundy/[0.06] px-3 py-2.5 text-center text-xs font-semibold text-burgundy"
+              >
+                Spin &amp; win an offer before you order →
+              </Link>
+            )}
             {step === "cart" ? (
               <button
                 type="button"
@@ -665,8 +780,8 @@ export function CartDrawer() {
                         ? "Opening pay…"
                         : "Placing…"
                       : payMethod === "upi"
-                        ? "Pay & place"
-                        : "Confirm"}
+                        ? `Pay ${formatPrice(payableTotal)}`
+                        : `Confirm · ${formatPrice(payableTotal)}`}
                   </button>
                 </div>
                 {!canConfirm && (
@@ -677,7 +792,7 @@ export function CartDrawer() {
               </div>
             )}
             <p className="mt-3 text-center text-xs text-ink-muted">
-              Walk-in pickup · pay before kitchen. By confirming you agree to our{" "}
+              Table order · sent to the kitchen after you confirm. By confirming you agree to our{" "}
               <Link to="/terms" onClick={closeCart} className="underline underline-offset-2">
                 Terms
               </Link>{" "}

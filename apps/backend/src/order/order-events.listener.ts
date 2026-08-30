@@ -44,11 +44,10 @@ export class OrderEventsListener implements OnModuleInit {
         }
       }
       if (payload.newStatus === 'ready_for_handover') {
-        try {
-          await this.notifications?.notifyOrderReady(payload.orderId);
-        } catch (err) {
-          this.logger.error(`Ready notify failed for ${payload.orderId}`, err);
-        }
+        // WhatsApp / SMS tracking intentionally dormant — PetPooja owns handoff.
+        this.logger.log(
+          `Ready notification skipped (dormant) for order ${payload.orderId}`,
+        );
       }
       // silence unused
       void SOCKET_EVENTS;

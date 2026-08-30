@@ -12,6 +12,9 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import type { OrderSource, PaymentMethod } from '@cafe/shared-types';
+import { OFFER_CATALOG } from '@cafe/shared-types';
+
+const OFFER_CODE_VALUES = Object.keys(OFFER_CATALOG);
 
 export class OrderItemDto {
   @IsString()
@@ -63,6 +66,21 @@ export class CreateOrderDto {
   @IsOptional()
   @IsString()
   tableId?: string | null;
+
+  /** Spin-wheel offer code (e.g. flat_50, bogo_burger). */
+  @IsOptional()
+  @IsIn(OFFER_CODE_VALUES)
+  offerCode?: string | null;
+
+  @IsOptional()
+  @IsString()
+  offerLabel?: string | null;
+
+  /** Discount in paise — server clamps to subtotal. */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  discountAmount?: number;
 }
 
 export class ReplaceItemsDto {

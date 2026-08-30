@@ -5,15 +5,18 @@ export const images = {
     "https://images.pexels.com/photos/9501604/pexels-photo-9501604.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
   coffeeCup:
     "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?crop=entropy&cs=srgb&fm=jpg&q=85&w=1600",
-  food: "https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?crop=entropy&cs=srgb&fm=jpg&q=85&w=940",
+  /** Pure veg — signature wood-fired pizza (replaces egg-on-toast stock photo). */
+  food:
+    "https://images.unsplash.com/photo-1571997478779-2adcbbe9ab2f?crop=entropy&cs=srgb&fm=jpg&q=85&w=940",
   community:
     "https://images.unsplash.com/photo-1543807535-eceef0bc6599?crop=entropy&cs=srgb&fm=jpg&q=85&w=940",
   story:
     "https://images.unsplash.com/photo-1761142621842-de37137d7c53?crop=entropy&cs=srgb&fm=jpg&q=85&w=940",
   memory1:
     "https://images.unsplash.com/photo-1521017432531-fbd92d768814?crop=entropy&cs=srgb&fm=jpg&q=85&w=700",
+  /** Pure veg — café drinks moment (replaces fried-egg brunch photo). */
   memory2:
-    "https://images.unsplash.com/photo-1559925393-8be0ec4767c8?crop=entropy&cs=srgb&fm=jpg&q=85&w=700",
+    "https://images.unsplash.com/photo-1572442388796-11668a67e53d?crop=entropy&cs=srgb&fm=jpg&q=85&w=700",
   memory3:
     "https://images.unsplash.com/photo-1554118811-1e0d58224f24?crop=entropy&cs=srgb&fm=jpg&q=85&w=700",
 } as const

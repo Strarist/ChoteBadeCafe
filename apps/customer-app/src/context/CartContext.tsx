@@ -7,8 +7,14 @@ import {
   useState,
   type ReactNode,
 } from "react"
-import type { MenuItem as ApiMenuItem } from "@cafe/shared-types"
+import type { MenuItem as ApiMenuItem, OfferCode } from "@cafe/shared-types"
+import { OFFER_CATALOG } from "@cafe/shared-types"
 import { getCatalogEntry } from "../data/menuCatalog"
+import { applyOfferToCart, type OfferCartResult } from "../lib/offers"
+import {
+  loadSpinRecord,
+  visitKeyFromTable,
+} from "../lib/spinSession"
 
 export type CartItem = {
   id: string
@@ -37,7 +43,15 @@ type CartContextValue = {
   decrement: (id: string) => void
   clearCart: () => void
   itemCount: number
+  /** Gross cart total in rupees (before offer). */
   subtotal: number
+  /** Payable total in rupees after offer. */
+  payableTotal: number
+  /** Discount in rupees. */
+  discountRupees: number
+  offerCode: OfferCode | null
+  offer: OfferCartResult | null
+  refreshOffer: () => void
   tableId: string | null
   setTableId: (id: string | null) => void
   setItemInstructions: (id: string, instructions: string) => void
@@ -64,12 +78,26 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false)
   const [ready, setReady] = useState(false)
   const [tableId, setTableIdState] = useState<string | null>(null)
+  const [offerCode, setOfferCode] = useState<OfferCode | null>(null)
+  const [offerTick, setOfferTick] = useState(0)
+
+  const refreshOffer = useCallback(() => {
+    const record = loadSpinRecord(visitKeyFromTable(tableId))
+    const code = record?.offerCode ?? null
+    setOfferCode(code && code in OFFER_CATALOG ? code : null)
+    setOfferTick((n) => n + 1)
+  }, [tableId])
 
   useEffect(() => {
     setItems(loadItems())
     setTableIdState(sessionStorage.getItem(TABLE_KEY))
     setReady(true)
   }, [])
+
+  useEffect(() => {
+    if (!ready) return
+    refreshOffer()
+  }, [ready, tableId, refreshOffer])
 
   useEffect(() => {
     if (!ready) return
@@ -175,6 +203,22 @@ export function CartProvider({ children }: { children: ReactNode }) {
     [items],
   )
 
+  const offer = useMemo(() => {
+    void offerTick
+    return applyOfferToCart(offerCode, items)
+  }, [offerCode, items, offerTick])
+
+  const discountRupees = useMemo(
+    () => Math.round((offer?.discountAmount ?? 0) / 100),
+    [offer],
+  )
+
+  const payableTotal = useMemo(() => {
+    const lines = offer?.orderItems ?? items
+    const gross = lines.reduce((sum, item) => sum + item.price * item.quantity, 0)
+    return Math.max(0, gross - discountRupees)
+  }, [offer, items, discountRupees])
+
   const value = useMemo(
     () => ({
       items,
@@ -190,6 +234,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
       clearCart,
       itemCount,
       subtotal,
+      payableTotal,
+      discountRupees,
+      offerCode,
+      offer,
+      refreshOffer,
       tableId,
       setTableId,
       setItemInstructions,
@@ -209,6 +258,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
       clearCart,
       itemCount,
       subtotal,
+      payableTotal,
+      discountRupees,
+      offerCode,
+      offer,
+      refreshOffer,
       tableId,
       setTableId,
       setItemInstructions,
