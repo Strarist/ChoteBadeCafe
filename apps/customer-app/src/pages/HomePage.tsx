@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { ArrowUpRight, BookOpen, Coffee, Gift, Users, UtensilsCrossed } from "lucide-react"
+import { ArrowUpRight, BookOpen, Coffee, Users, UtensilsCrossed } from "lucide-react"
 import { Link } from "react-router-dom"
 import { Marquee } from "../components/Marquee"
 import { Appear, EmergeLine, PageIntro } from "../components/MotionText"
@@ -7,9 +7,6 @@ import { Reveal } from "../components/Reveal"
 import { useTilt } from "../hooks/useTilt"
 import { useOrderNow } from "../hooks/useOrderNow"
 import { images, pillars, site } from "../data/site"
-import { OFFER_CATALOG } from "@cafe/shared-types"
-import { useCart } from "../context/CartContext"
-import { hasSpunThisVisit, loadSpinRecord, visitKeyFromTable } from "../lib/spinSession"
 
 const iconMap = {
   coffee: Coffee,
@@ -23,12 +20,7 @@ const CURTAIN_KEY = "cb-home-curtain"
 export function HomePage() {
   const tiltRef = useTilt(7)
   const orderNow = useOrderNow()
-  const { tableId } = useCart()
   const [curtain, setCurtain] = useState(false)
-  const visitKey = visitKeyFromTable(tableId)
-  const spun = hasSpunThisVisit(visitKey)
-  const won = loadSpinRecord(visitKey)
-  const wonLabel = won ? OFFER_CATALOG[won.offerCode]?.label : null
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
@@ -50,36 +42,6 @@ export function HomePage() {
           onAnimationEnd={() => setCurtain(false)}
         />
       ) : null}
-      <div className="pt-16 md:pt-[4.25rem]">
-        <div className="relative z-10 border-b border-burgundy/10 bg-burgundy px-4 py-2.5 text-center text-cream">
-          <Link
-            to="/visit"
-            className="inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 text-[0.78rem] font-semibold tracking-wide transition hover:text-cream/90"
-          >
-            <span className="uppercase tracking-[0.14em] text-cream/70">We are open</span>
-            <span aria-hidden>·</span>
-            <span>
-              {site.opening.dateLabel} · {site.opening.timeLabel}
-            </span>
-            <span className="text-cream/80">Details →</span>
-          </Link>
-        </div>
-        <Link
-          to="/spin"
-          className="relative z-10 flex items-center justify-center gap-2 border-b border-clay/20 bg-[linear-gradient(90deg,#a95e47_0%,#801a2d_55%,#a95e47_100%)] px-4 py-3 text-center text-cream transition hover:brightness-110"
-        >
-          <Gift size={16} className="shrink-0 opacity-90" aria-hidden />
-          {spun && wonLabel ? (
-            <span className="text-[0.82rem] font-semibold tracking-wide">
-              Your offer: {wonLabel} · Tap to view →
-            </span>
-          ) : (
-            <span className="text-[0.82rem] font-semibold tracking-wide">
-              Spin &amp; Win Amazing Offers! · Tap to spin →
-            </span>
-          )}
-        </Link>
-      </div>
       <section className="relative overflow-hidden pt-10 md:pt-16">
         <div
           className="pointer-events-none absolute -left-32 top-24 h-72 w-72 rounded-full bg-burgundy/10 blur-3xl"
