@@ -82,3 +82,6 @@ query_engine-*.dll.node*
 # Docker / Caddy leftovers if someone runs compose on the host
 caddy_data/
 caddy_config/
+.neon
+.agents/
+skills-lock.json

@@ -152,7 +152,7 @@ export class LivePetPoojaOrderPush implements PetPoojaOrderPush {
         ? [
             {
               id: order.offerCode ?? 'cbc_offer',
-              title: order.offerLabel ?? 'Spin & Win offer',
+              title: order.offerLabel ?? 'Offer',
               price: discountTotal,
             },
           ]

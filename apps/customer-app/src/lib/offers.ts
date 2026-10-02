@@ -1,6 +1,5 @@
 import {
   OFFER_CATALOG,
-  WHEEL_SEGMENTS,
   type AppliedOffer,
   type OfferCode,
 } from "@cafe/shared-types"
@@ -139,14 +138,4 @@ export function applyOfferToCart(
   }
 
   return null
-}
-
-/** Weighted by the physical wheel segments (matches the reference layout). */
-export function pickRandomOffer(): OfferCode {
-  const index = Math.floor(Math.random() * WHEEL_SEGMENTS.length)
-  return WHEEL_SEGMENTS[index]!
-}
-
-export function pickRandomWheelIndex(): number {
-  return Math.floor(Math.random() * WHEEL_SEGMENTS.length)
 }

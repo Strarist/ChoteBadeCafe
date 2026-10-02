@@ -13,7 +13,12 @@ import {
 import { openRazorpayCheckout } from "../lib/razorpayCheckout"
 import { getLenis } from "../hooks/useSmoothScroll"
 import { useModalFocus } from "../hooks/useModalFocus"
+import { useConnectionStatus } from "../hooks/useConnectionStatus"
 import { isPaidOrderStatus, toCustomerError } from "../lib/customerError"
+import type { RequestExtra } from "../lib/api"
+
+/** Free-tier API cold starts often outlast the default 20s fetch timeout. */
+const PLACE_ORDER: RequestExtra = { timeoutMs: 75_000, retries: 0 }
 
 function formatPrice(price: number) {
   return `₹${price}`
@@ -40,6 +45,7 @@ export function CartDrawer() {
     setItemInstructions,
   } = useCart()
   const navigate = useNavigate()
+  const connection = useConnectionStatus()
   const { panelRef, closeButtonRef, requestClose } = useModalFocus(isOpen, closeCart)
 
   const [step, setStep] = useState<Step>("cart")
@@ -49,11 +55,21 @@ export function CartDrawer() {
   const [payMethod, setPayMethod] = useState<"pay_at_counter" | "upi">("pay_at_counter")
   const [onlinePay, setOnlinePay] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [waking, setWaking] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [placed, setPlaced] = useState<OrderDetail | null>(null)
   const [pendingCheckout, setPendingCheckout] = useState<PendingCheckout | null>(null)
 
   const canConfirm = name.trim().length > 0 && mobile.trim().length >= 8
+
+  useEffect(() => {
+    if (!busy) {
+      setWaking(false)
+      return
+    }
+    const timer = window.setTimeout(() => setWaking(true), 3500)
+    return () => window.clearTimeout(timer)
+  }, [busy])
 
   useEffect(() => {
     if (!isOpen) return
@@ -67,7 +83,7 @@ export function CartDrawer() {
 
     let cancelled = false
     void api
-      .get<OrderDetail>(`/orders/${saved.orderId}`, saved.orderId)
+      .get<OrderDetail>(`/orders/${saved.orderId}`, saved.orderId, PLACE_ORDER)
       .then((current) => {
         if (cancelled) return
         if (isPaidOrderStatus(current.status) || current.paymentStatus === "paid") {
@@ -218,6 +234,7 @@ export function CartDrawer() {
         `/orders/${orderId}/checkout`,
         { method: method === "upi" ? "upi" : "pay_at_counter" },
         orderId,
+        PLACE_ORDER,
       )
       persistPending({
         orderId,
@@ -238,7 +255,7 @@ export function CartDrawer() {
       return runUpiPayment(orderId)
     }
 
-    return api.get<OrderDetail>(`/orders/${orderId}`, orderId)
+    return api.get<OrderDetail>(`/orders/${orderId}`, orderId, PLACE_ORDER)
   }
 
   const resumeCheckout = async () => {
@@ -248,7 +265,11 @@ export function CartDrawer() {
     setError(null)
     try {
       if (pending.accessToken) storeOrderAccess(pending.orderId, pending.accessToken)
-      const current = await api.get<OrderDetail>(`/orders/${pending.orderId}`, pending.orderId)
+      const current = await api.get<OrderDetail>(
+        `/orders/${pending.orderId}`,
+        pending.orderId,
+        PLACE_ORDER,
+      )
       if (isPaidOrderStatus(current.status) || current.paymentStatus === "paid") {
         clearPendingCheckout()
         setPendingCheckout(null)
@@ -312,7 +333,7 @@ export function CartDrawer() {
         offerCode: offerCode ?? undefined,
         discountAmount: offer?.discountAmount ?? 0,
         offerLabel: offer?.label ?? undefined,
-      })
+      }, undefined, PLACE_ORDER)
 
       persistPending({
         orderId: created.id,
@@ -466,11 +487,20 @@ export function CartDrawer() {
                 </Link>
               )}
               <p className="text-sm text-ink-muted">
-                Dine-in at your table · pay online or at the counter.
+                {onlinePay
+                  ? "Dine-in at your table · pay online or at the counter."
+                  : "Dine-in at your table · pay at the counter."}
               </p>
-              <label className="block text-xs font-semibold tracking-[0.08em] text-burgundy">
+              {connection === "server_unreachable" && (
+                <p className="text-xs leading-snug text-burgundy">
+                  The café server isn’t responding yet. Confirm will keep trying for about a minute while it wakes up.
+                </p>
+              )}
+              <label className="block text-xs font-semibold tracking-[0.08em] text-burgundy" htmlFor="checkout-name">
                 NAME *
                 <input
+                  id="checkout-name"
+                  name="name"
                   className="mt-1.5 w-full rounded-2xl border border-ink/10 bg-cream/80 px-4 py-3.5 text-base text-ink-deep outline-none transition focus:border-burgundy/40 focus:ring-2 focus:ring-burgundy/15"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -479,9 +509,11 @@ export function CartDrawer() {
                   aria-required
                 />
               </label>
-              <label className="block text-xs font-semibold tracking-[0.08em] text-burgundy">
+              <label className="block text-xs font-semibold tracking-[0.08em] text-burgundy" htmlFor="checkout-mobile">
                 MOBILE *
                 <input
+                  id="checkout-mobile"
+                  name="mobile"
                   className="mt-1.5 w-full rounded-2xl border border-ink/10 bg-cream/80 px-4 py-3.5 text-base text-ink-deep outline-none transition focus:border-burgundy/40 focus:ring-2 focus:ring-burgundy/15"
                   value={mobile}
                   onChange={(e) => setMobile(e.target.value)}
@@ -496,9 +528,11 @@ export function CartDrawer() {
                   Fill name * and mobile * (8+ digits) to confirm.
                 </p>
               )}
-              <label className="block text-xs font-semibold tracking-[0.08em] text-burgundy">
+              <label className="block text-xs font-semibold tracking-[0.08em] text-burgundy" htmlFor="checkout-email">
                 EMAIL (optional)
                 <input
+                  id="checkout-email"
+                  name="email"
                   className="mt-1.5 w-full rounded-2xl border border-ink/10 bg-cream/80 px-4 py-3.5 text-base text-ink-deep outline-none transition focus:border-burgundy/40 focus:ring-2 focus:ring-burgundy/15"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -565,6 +599,8 @@ export function CartDrawer() {
                           </p>
                           <p className="mt-1 text-xs text-ink-muted">{item.sectionTitle}</p>
                           <input
+                            id={`kitchen-note-${item.id}`}
+                            name={`kitchen-note-${item.id}`}
                             className="mt-2 w-full rounded-xl border border-ink/10 bg-cream/70 px-3 py-2 text-xs text-ink outline-none"
                             placeholder="Kitchen note (optional)"
                             value={item.instructions ?? ""}
@@ -736,15 +772,6 @@ export function CartDrawer() {
               </div>
             </div>
 
-            {step === "cart" && !offerCode && (
-              <Link
-                to="/spin"
-                onClick={closeCart}
-                className="mb-3 block rounded-xl border border-burgundy/20 bg-burgundy/[0.06] px-3 py-2.5 text-center text-xs font-semibold text-burgundy"
-              >
-                Spin &amp; win an offer before you order →
-              </Link>
-            )}
             {step === "cart" ? (
               <button
                 type="button"
@@ -776,9 +803,11 @@ export function CartDrawer() {
                     aria-disabled={busy || !canConfirm}
                   >
                     {busy
-                      ? payMethod === "upi"
-                        ? "Opening pay…"
-                        : "Placing…"
+                      ? waking
+                        ? "Waking server…"
+                        : payMethod === "upi"
+                          ? "Opening pay…"
+                          : "Placing…"
                       : payMethod === "upi"
                         ? `Pay ${formatPrice(payableTotal)}`
                         : `Confirm · ${formatPrice(payableTotal)}`}

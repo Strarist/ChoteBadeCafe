@@ -1247,12 +1247,3 @@
 
 .safe-bottom { padding-bottom: max(1.25rem, env(safe-area-inset-bottom)); }
 
-.spin-title {
-  background: linear-gradient(180deg, #f5e0a0 0%, #d4a84b 48%, #b8862d 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  text-shadow: none;
-  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35));
-}
-

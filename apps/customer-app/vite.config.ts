@@ -60,11 +60,12 @@ export default defineConfig({
         ],
         runtimeCaching: [
           {
-            urlPattern: ({ url }: { url: URL }) =>
-              url.pathname.startsWith('/api') ||
-              url.pathname.startsWith('/payments') ||
-              url.pathname.startsWith('/orders'),
+            // Same-origin dev proxy only. A pathname match also caught the
+            // cross-origin Render API and could leave checkout hanging.
+            urlPattern: ({ url, sameOrigin }: { url: URL; sameOrigin: boolean }) =>
+              sameOrigin && url.pathname.startsWith('/api'),
             handler: 'NetworkOnly',
+            options: { networkTimeoutSeconds: 20 },
           },
         ],
       },

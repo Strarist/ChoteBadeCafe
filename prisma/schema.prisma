@@ -4,8 +4,10 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Neon pooler. Migrations use the direct connection. Local Postgres can set both to the same URL.
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 enum OrderSource {

@@ -17,7 +17,6 @@ export function Layout() {
   const { pathname } = useLocation()
   const connectionStatus = useConnectionStatus()
   const { isOpen: cartOpen } = useCart()
-  const isSpin = pathname === "/spin"
   useSmoothScroll()
 
   useEffect(() => {
@@ -30,7 +29,6 @@ export function Layout() {
       "/": "Chote Bade Café",
       "/story": "Our Story — Chote Bade",
       "/menu": "Menu — Chote Bade",
-      "/spin": "Spin & Win — Chote Bade",
       "/journal": "Journal — Chote Bade",
       "/memory-wall": "Memory Wall — Chote Bade",
       "/visit": "Contact Us — Chote Bade",
@@ -49,28 +47,20 @@ export function Layout() {
   }, [pathname])
 
   return (
-    <div
-      className={`relative min-h-screen overflow-x-hidden ${
-        isSpin ? "bg-[#2a0a10] text-[#f5e6c8]" : "bg-transparent text-ink"
-      }`}
-    >
+    <div className="relative min-h-screen overflow-x-hidden bg-transparent text-ink">
       <ConnectionBanner status={connectionStatus} />
-      {!isSpin ? (
-        <>
-          <div className="pointer-events-none fixed inset-0 -z-10 grain" aria-hidden />
-          <div
-            className="pointer-events-none fixed inset-x-0 top-0 -z-10 h-[70vh] bg-gradient-to-b from-cream-warm/80 via-transparent to-transparent"
-            aria-hidden
-          />
-        </>
-      ) : null}
+      <div className="pointer-events-none fixed inset-0 -z-10 grain" aria-hidden />
+      <div
+        className="pointer-events-none fixed inset-x-0 top-0 -z-10 h-[70vh] bg-gradient-to-b from-cream-warm/80 via-transparent to-transparent"
+        aria-hidden
+      />
       <div {...(cartOpen ? { inert: true as const } : {})}>
-        {!isSpin ? <Header /> : null}
-        <main className={isSpin ? "page-main p-0" : "page-main pb-24 md:pb-16"}>
+        <Header />
+        <main className="page-main pb-24 md:pb-16">
           <PageTransition />
-          {!isSpin ? <PullUpChair /> : null}
+          <PullUpChair />
         </main>
-        {!isSpin ? <Footer /> : null}
+        <Footer />
       </div>
       <CartBar />
       <CartDrawer />

@@ -42,7 +42,13 @@ export class OrderController {
     @Body() dto: CreateOrderDto,
   ): Promise<OrderDetail> {
     this.createIpLimit.hit(`orders:${req.ip ?? 'unknown'}`);
-    return this.orders.create(dto);
+    // Public checkout must not honor client-supplied spin discounts.
+    return this.orders.create({
+      source: dto.source,
+      customer: dto.customer,
+      items: dto.items,
+      tableId: dto.tableId,
+    });
   }
 
   @Get()

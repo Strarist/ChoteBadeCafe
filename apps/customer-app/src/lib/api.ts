@@ -27,14 +27,25 @@ function readAccessMap(): Record<string, string> {
   }
 }
 
-async function request<T>(path: string, init: RequestInit = {}, orderId?: string): Promise<T> {
+export type RequestExtra = {
+  timeoutMs?: number;
+  retries?: number;
+};
+
+async function request<T>(
+  path: string,
+  init: RequestInit = {},
+  orderId?: string,
+  extra?: RequestExtra,
+): Promise<T> {
   const { headers: initHeaders, ...rest } = init;
   const access = orderId ? getOrderAccess(orderId) : null;
   const method = (rest.method ?? 'GET').toUpperCase();
-  const retries = method === 'GET' ? 2 : 0;
+  const retries = extra?.retries ?? (method === 'GET' ? 2 : 0);
   const res = await resilientFetch(joinApiUrl(path), {
     ...rest,
     retries,
+    ...(extra?.timeoutMs ? { timeoutMs: extra.timeoutMs } : {}),
     headers: {
       ...(rest.body ? { 'Content-Type': 'application/json' } : {}),
       ...(access ? { 'X-Order-Access': access } : {}),
@@ -60,17 +71,20 @@ async function request<T>(path: string, init: RequestInit = {}, orderId?: string
 
 export const api = {
   url: socketOrigin(),
-  get: <T>(path: string, orderId?: string) => request<T>(path, {}, orderId),
-  post: <T>(path: string, body?: unknown, orderId?: string) =>
+  get: <T>(path: string, orderId?: string, extra?: RequestExtra) =>
+    request<T>(path, {}, orderId, extra),
+  post: <T>(path: string, body?: unknown, orderId?: string, extra?: RequestExtra) =>
     request<T>(
       path,
       { method: 'POST', body: body ? JSON.stringify(body) : undefined },
       orderId,
+      extra,
     ),
-  patch: <T>(path: string, body?: unknown, orderId?: string) =>
+  patch: <T>(path: string, body?: unknown, orderId?: string, extra?: RequestExtra) =>
     request<T>(
       path,
       { method: 'PATCH', body: body ? JSON.stringify(body) : undefined },
       orderId,
+      extra,
     ),
 };

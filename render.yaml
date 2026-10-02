@@ -2,12 +2,8 @@
 # Blueprints / Starter plans ask for a card.
 # Follow DEPLOY-CLOUD.md and create each Free service by hand instead.
 #
-# If you later add billing, you can switch plans here and apply a Blueprint.
-databases:
-  - name: chote-bade-db
-    plan: free
-    postgresMajorVersion: '16'
-
+# Postgres is Neon (project proud-grass-48491149, branch production).
+# Set DATABASE_URL (pooled, with pgbouncer=true) and DATABASE_URL_UNPOOLED (direct) on the web service.
 services:
   - type: web
     name: chote-bade-api
@@ -15,14 +11,14 @@ services:
     plan: free
     healthCheckPath: /health
     buildCommand: corepack enable && pnpm install --frozen-lockfile --prod=false && pnpm --filter @cafe/shared-types build && pnpm exec prisma generate --schema=prisma/schema.prisma && pnpm --filter @cafe/backend build
-    startCommand: pnpm exec prisma migrate deploy --schema=prisma/schema.prisma && pnpm db:seed && node apps/backend/dist/main.js
+    startCommand: sh -c 'export DATABASE_URL_UNPOOLED="${DATABASE_URL_UNPOOLED:-$DATABASE_URL}"; pnpm exec prisma migrate deploy --schema=prisma/schema.prisma && pnpm db:seed && node apps/backend/dist/main.js'
     envVars:
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
-        fromDatabase:
-          name: chote-bade-db
-          property: connectionString
+        sync: false
+      - key: DATABASE_URL_UNPOOLED
+        sync: false
       - key: STAFF_SESSION_SECRET
         generateValue: true
       - key: ALLOW_FAKE_PAYMENTS

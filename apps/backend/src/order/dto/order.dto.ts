@@ -6,6 +6,7 @@ import {
   IsOptional,
   IsString,
   Max,
+  MaxLength,
   Min,
   MinLength,
   ValidateNested,
@@ -27,6 +28,7 @@ export class OrderItemDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(240)
   instructions?: string | null;
 
   /** Display/API name — used to recover if a stale cart id no longer exists. */
@@ -38,14 +40,17 @@ export class OrderItemDto {
 export class CustomerDto {
   @IsString()
   @MinLength(1)
+  @MaxLength(80)
   name!: string;
 
   @IsString()
   @MinLength(8)
+  @MaxLength(20)
   mobile!: string;
 
   @IsOptional()
   @IsEmail()
+  @MaxLength(120)
   email?: string | null;
 }
 
@@ -65,6 +70,7 @@ export class CreateOrderDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(40)
   tableId?: string | null;
 
   /** Spin-wheel offer code (e.g. flat_50, bogo_burger). */

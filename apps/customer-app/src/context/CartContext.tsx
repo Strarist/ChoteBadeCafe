@@ -8,13 +8,8 @@ import {
   type ReactNode,
 } from "react"
 import type { MenuItem as ApiMenuItem, OfferCode } from "@cafe/shared-types"
-import { OFFER_CATALOG } from "@cafe/shared-types"
 import { getCatalogEntry } from "../data/menuCatalog"
 import { applyOfferToCart, type OfferCartResult } from "../lib/offers"
-import {
-  loadSpinRecord,
-  visitKeyFromTable,
-} from "../lib/spinSession"
 
 export type CartItem = {
   id: string
@@ -82,15 +77,23 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [offerTick, setOfferTick] = useState(0)
 
   const refreshOffer = useCallback(() => {
-    const record = loadSpinRecord(visitKeyFromTable(tableId))
-    const code = record?.offerCode ?? null
-    setOfferCode(code && code in OFFER_CATALOG ? code : null)
+    setOfferCode(null)
     setOfferTick((n) => n + 1)
-  }, [tableId])
+  }, [])
 
   useEffect(() => {
     setItems(loadItems())
     setTableIdState(sessionStorage.getItem(TABLE_KEY))
+    try {
+      const drop: string[] = []
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key?.startsWith("cbc-spin-visit:")) drop.push(key)
+      }
+      for (const key of drop) localStorage.removeItem(key)
+    } catch {
+      /* private mode */
+    }
     setReady(true)
   }, [])
 
