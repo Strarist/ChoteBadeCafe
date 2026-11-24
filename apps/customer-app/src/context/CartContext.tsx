@@ -9,6 +9,7 @@ import {
 } from "react"
 import type { MenuItem as ApiMenuItem, OfferCode } from "@cafe/shared-types"
 import { getCatalogEntry } from "../data/menuCatalog"
+import { MENU_STORAGE_KEY } from "../lib/menuCache"
 import { applyOfferToCart, type OfferCartResult } from "../lib/offers"
 
 export type CartItem = {
@@ -54,7 +55,7 @@ type CartContextValue = {
 }
 
 const CartContext = createContext<CartContextValue | null>(null)
-const STORAGE_KEY = "chote-bade-cart-v2"
+const STORAGE_KEY = "chote-bade-cart-v3"
 const TABLE_KEY = "chote-bade-table-id"
 
 function loadItems(): CartItem[] {
@@ -88,7 +89,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const drop: string[] = []
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i)
-        if (key?.startsWith("cbc-spin-visit:")) drop.push(key)
+        if (!key) continue
+        // Drop spin leftovers and prior cart/menu caches after menu migrations.
+        if (
+          key.startsWith("cbc-spin-visit:") ||
+          (/^chote-bade-cart-v\d+$/.test(key) && key !== STORAGE_KEY) ||
+          (/^chote-bade-menu-v\d+$/.test(key) && key !== MENU_STORAGE_KEY)
+        ) {
+          drop.push(key)
+        }
       }
       for (const key of drop) localStorage.removeItem(key)
     } catch {

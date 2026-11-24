@@ -3,8 +3,9 @@ import { staticMenu } from '../data/staticMenu'
 import { api } from './api'
 
 const MEMORY_TTL_MS = 60_000
-const STORAGE_KEY = 'chote-bade-menu-v4'
-const STORAGE_TTL_MS = 7 * 24 * 60 * 60 * 1000
+export const MENU_STORAGE_KEY = 'chote-bade-menu-v5'
+/** Keep short enough that a menu deploy refreshes within a shift. */
+const STORAGE_TTL_MS = 12 * 60 * 60 * 1000
 
 let cached: ApiMenuItem[] | null = null
 let cachedAt = 0
@@ -25,7 +26,7 @@ function isValidMenuItem(value: unknown): value is ApiMenuItem {
 
 function loadStoredMenu(): ApiMenuItem[] | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = localStorage.getItem(MENU_STORAGE_KEY)
     if (!raw) return null
     const parsed = JSON.parse(raw) as { savedAt?: number; items?: unknown[] }
     if (!parsed.savedAt || !Array.isArray(parsed.items)) return null
@@ -41,7 +42,7 @@ function saveStoredMenu(items: ApiMenuItem[]) {
   const safe = items.filter(isValidMenuItem)
   if (!safe.length) return
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ savedAt: Date.now(), items: safe }))
+    localStorage.setItem(MENU_STORAGE_KEY, JSON.stringify({ savedAt: Date.now(), items: safe }))
   } catch {
     /* quota / private mode */
   }

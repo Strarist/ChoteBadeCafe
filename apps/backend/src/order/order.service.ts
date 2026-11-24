@@ -618,6 +618,22 @@ export class OrderService {
 
     for (const item of items) {
       if (found.has(item.menuItemId)) continue;
+
+      // Bundled/static carts use petpoojaItemId as the client id (pp-*).
+      if (item.menuItemId.startsWith('pp-')) {
+        const byPetpooja = await this.prisma.menuItem.findFirst({
+          where: {
+            isAvailable: true,
+            petpoojaItemId: item.menuItemId,
+          },
+        });
+        if (byPetpooja) {
+          found.set(item.menuItemId, byPetpooja);
+          continue;
+        }
+      }
+
+      // Name fallback only after id + petpooja miss (stale UUID after menu refresh).
       const label = item.name?.trim();
       if (label) {
         const named = await this.prisma.menuItem.findFirst({
